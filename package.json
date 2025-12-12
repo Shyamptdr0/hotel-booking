@@ -2,6 +2,7 @@
   "name": "restaurant-billing-app",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -18,8 +19,10 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "idb": "^8.0.3",
     "lucide-react": "^0.561.0",
     "next": "16.0.10",
+    "next-pwa": "^5.6.0",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "recharts": "^2.12.7",

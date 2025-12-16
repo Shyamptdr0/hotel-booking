@@ -127,22 +127,26 @@ export default function BillHistory() {
 
   return (
     <AuthGuard>
-      <div className="flex h-screen bg-gray-100">
-        <Sidebar />
+      <div className=" container mx-auto h-screen bg-gray-100">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex h-full w-64 flex-col bg-gray-50 border-r">
+          <Sidebar />
+        </div>
+        
         <div className="flex-1 flex flex-col">
           <Navbar />
-          <main className="flex-1 p-6 overflow-auto">
-            <div className="mb-6">
+          <main className="flex-1 pt-16 p-4 lg:p-6 overflow-auto">
+            <div className="mb-4 lg:mb-6">
               <Link href="/dashboard" className="flex items-center text-gray-600 hover:text-gray-900 mb-2">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Link>
-              <h1 className="text-3xl font-bold text-gray-900">Bill History</h1>
-              <p className="text-gray-600">View and search previous bills</p>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Bill History</h1>
+              <p className="text-gray-600 text-sm lg:text-base">View and search previous bills</p>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Bills</CardTitle>
@@ -184,7 +188,7 @@ export default function BillHistory() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 mb-4 lg:mb-6">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -192,33 +196,35 @@ export default function BillHistory() {
                     placeholder="Search by bill number..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-sm lg:text-base"
                   />
                 </div>
               </div>
-              <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by payment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Payments</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="upi">UPI</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                  <SelectTrigger className="w-full sm:w-40 lg:w-48 text-sm lg:text-base">
+                    <SelectValue placeholder="Filter by payment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Payments</SelectItem>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="upi">UPI</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="w-full sm:w-40 lg:w-48 text-sm lg:text-base">
+                    <SelectValue placeholder="Filter by date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Bills Table */}
@@ -238,39 +244,40 @@ export default function BillHistory() {
                     </Link>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Bill No</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Payment</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredBills.map((bill) => (
-                        <TableRow key={bill.id}>
-                          <TableCell className="font-medium">#{bill.bill_no}</TableCell>
-                          <TableCell>
-                            {new Date(bill.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            {new Date(bill.created_at).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            ₹{parseFloat(bill.total_amount).toFixed(2)}
-                          </TableCell>
-                          <TableCell>
-                            <span className="capitalize px-2 py-1 bg-gray-100 rounded text-sm">
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[600px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="whitespace-nowrap">Bill No</TableHead>
+                          <TableHead className="whitespace-nowrap">Date</TableHead>
+                          <TableHead className="whitespace-nowrap">Time</TableHead>
+                          <TableHead className="whitespace-nowrap">Total</TableHead>
+                          <TableHead className="whitespace-nowrap">Payment</TableHead>
+                          <TableHead className="whitespace-nowrap">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredBills.map((bill) => (
+                          <TableRow key={bill.id}>
+                            <TableCell className="font-medium whitespace-nowrap">#{bill.bill_no}</TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {new Date(bill.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {new Date(bill.created_at).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </TableCell>
+                            <TableCell className="font-semibold whitespace-nowrap">
+                              ₹{parseFloat(bill.total_amount).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <span className="capitalize px-2 py-1 bg-gray-100 rounded text-sm">
                               {bill.payment_type}
                             </span>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             <div className="flex space-x-2">
                               <Link href={`/billing/print/${bill.id}`}>
                                 <Button size="sm" variant="outline">
@@ -292,6 +299,7 @@ export default function BillHistory() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>

@@ -303,35 +303,39 @@ export default function Dashboard() {
   return (
     <AuthGuard>
       <div className="flex h-screen bg-gray-100">
-        <Sidebar />
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex h-full w-64 flex-col bg-gray-50 border-r">
+          <Sidebar />
+        </div>
 
         <div className="flex flex-1 flex-col">
           <Navbar />
 
-          <main className="flex-1 space-y-8 overflow-auto p-6">
+          <main className="flex-1 pt-16 space-y-6 lg:space-y-8 overflow-auto p-4 lg:p-6">
             {/* HEADER */}
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               {/* LEFT */}
               <div>
-                <h1 className="text-3xl font-bold">Dashboard Overview</h1>
-                <p className="text-gray-600">{formatDate(currentDate)}</p>
+                <h1 className="text-2xl lg:text-3xl font-bold">Dashboard Overview</h1>
+                <p className="text-gray-600 text-sm lg:text-base">{formatDate(currentDate)}</p>
               </div>
 
               {/* RIGHT */}
-              <div className="flex items-center gap-2">
-                <Button onClick={handleRefresh} disabled={refreshing}>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <Button onClick={handleRefresh} disabled={refreshing} className="w-full sm:w-auto">
                   <RefreshCw
                     className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
                   />
-                  Refresh
+                  <span className="sm:inline">Refresh</span>
                 </Button>
 
                 <Button
                   onClick={() => setShowCalendar(!showCalendar)}
                   variant={showCalendar ? 'default' : 'outline'}
+                  className="w-full sm:w-auto"
                 >
                   <Calendar className="mr-2 h-4 w-4" />
-                  Calendar
+                  <span className="sm:inline">Calendar</span>
                 </Button>
               </div>
             </div>
@@ -552,7 +556,7 @@ export default function Dashboard() {
 
 
             {/* MONTHLY SUMMARY */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
               <SummaryCard
                 title="Monthly Revenue"
                 value={`₹${monthly.revenue.toFixed(2)}`}
@@ -635,7 +639,7 @@ export default function Dashboard() {
             </Card>
 
             {/* QUICK ACTIONS */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
               <QuickAction
                 title="Create Bill"
                 icon={IndianRupee}

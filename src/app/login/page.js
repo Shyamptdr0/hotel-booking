@@ -63,8 +63,8 @@ export default function LoginPage() {
               <Utensils className="h-6 w-6 text-red-600" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">
-            Restaurant Billing
+          <CardTitle className="text-xl lg:text-2xl font-bold text-gray-900">
+            Pram Mitra Restaurant
           </CardTitle>
           <CardDescription>
             Sign in to manage your restaurant

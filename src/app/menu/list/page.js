@@ -136,7 +136,7 @@ export default function MenuList() {
 
   return (
     <AuthGuard>
-      <div className="flex h-screen bg-gray-100">
+      <div className="container mx-auto h-screen bg-gray-100">
         <Sidebar />
         <div className="flex-1 flex flex-col">
           <Navbar />

@@ -164,22 +164,26 @@ export default function AddMenuItem() {
   return (
     <AuthGuard>
       <div className="flex h-screen bg-gray-100">
-        <Sidebar />
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex h-full w-64 flex-col bg-gray-50 border-r">
+          <Sidebar />
+        </div>
+        
         <div className="flex-1 flex flex-col">
           <Navbar />
-          <main className="flex-1 p-6 overflow-auto">
-            <div className="mb-6">
+          <main className="flex-1 pt-16 p-4 lg:p-6 overflow-auto">
+            <div className="mb-4 lg:mb-6">
               <Link href="/dashboard" className="flex items-center text-gray-600 hover:text-gray-900 mb-2">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Link>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
                 {editingItem ? 'Edit Menu Item' : 'Add Menu Item'}
               </h1>
-              <p className="text-gray-600">Manage your restaurant menu items</p>
+              <p className="text-gray-600 text-sm lg:text-base">Manage your restaurant menu items</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
               {/* Add/Edit Form */}
               <Card>
                 <CardHeader>

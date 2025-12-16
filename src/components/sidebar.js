@@ -1,18 +1,22 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet.jsx'
 import {
   LayoutDashboard,
   Utensils,
   PlusCircle,
- IndianRupee,
+  IndianRupee,
   History,
   LogOut,
   ChefHat,
-  Settings
+  Settings,
+  Menu,
+  X
 } from 'lucide-react'
 
 const navigation = [
@@ -26,6 +30,7 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const [isOpen, setIsOpen] = useState(false)
 
   const handleLogout = async () => {
     try {
@@ -44,12 +49,12 @@ export function Sidebar() {
     window.location.href = '/login'
   }
 
-  return (
-    <div className="flex h-full w-64 flex-col bg-gray-50 border-r">
+  const NavContent = () => (
+    <div className="flex flex-col h-full">
       <div className="flex h-20 items-center px-6 border-b">
         <div className="flex items-center space-x-3">
           <ChefHat className="h-10 w-10 text-orange-600" />
-          <span className="text-2xl font-bold text-gray-900">Restaurant POS</span>
+          <span className="text-xl lg:text-2xl font-bold text-gray-900">Pram Mitra Restaurant</span>
         </div>
       </div>
       
@@ -60,14 +65,15 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={() => setIsOpen(false)}
               className={cn(
-                'flex items-center px-3 py-3 text-base font-medium rounded-md transition-colors',
+                'flex items-center px-3 py-3 text-sm lg:text-base font-medium rounded-md transition-colors',
                 isActive
                   ? 'bg-orange-100 text-orange-700 border-r-2 border-orange-600'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
             >
-              <item.icon className="mr-3 h-6 w-6" />
+              <item.icon className="mr-3 h-5 w-5 lg:h-6 lg:w-6" />
               {item.name}
             </Link>
           )
@@ -78,12 +84,39 @@ export function Sidebar() {
         <Button
           onClick={handleLogout}
           variant="ghost"
-          className="w-full justify-start text-gray-600 hover:text-gray-900 py-3 text-base font-medium"
+          className="w-full justify-start text-gray-600 hover:text-gray-900 py-3 text-sm lg:text-base font-medium"
         >
-          <LogOut className="mr-3 h-6 w-6" />
+          <LogOut className="mr-3 h-5 w-5 lg:h-6 lg:w-6" />
           Logout
         </Button>
       </div>
     </div>
+  )
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex h-full w-64 flex-col bg-gray-50 border-r">
+        <NavContent />
+      </div>
+
+      {/* Mobile Sidebar using Sheet */}
+      <div className="lg:hidden">
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-white shadow-md h-10 w-10 p-0 flex items-center justify-center"
+            >
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-64">
+            <NavContent />
+          </SheetContent>
+        </Sheet>
+      </div>
+    </>
   )
 }

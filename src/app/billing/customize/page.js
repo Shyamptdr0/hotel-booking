@@ -205,27 +205,31 @@ export default function BillCustomize() {
   return (
     <AuthGuard>
       <div className="flex h-screen bg-gray-100">
-        <Sidebar />
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex h-full w-64 flex-col bg-gray-50 border-r">
+          <Sidebar />
+        </div>
+        
         <div className="flex-1 flex flex-col">
           <Navbar />
-          <main className="flex-1 p-6 overflow-auto">
+          <main className="flex-1 pt-16 p-4 lg:p-6 overflow-auto">
             {/* Header */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between">
+            <div className="mb-4 lg:mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <Link href="/dashboard" className="flex items-center text-gray-600 hover:text-gray-900">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Dashboard
                 </Link>
-                <div className="flex space-x-2">
-                  <Button onClick={() => setPreviewMode(!previewMode)} variant="outline" className="flex items-center">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button onClick={() => setPreviewMode(!previewMode)} variant="outline" className="flex items-center justify-center">
                     <Eye className="h-4 w-4 mr-2" />
                     {previewMode ? 'Edit Mode' : 'Preview Mode'}
                   </Button>
-                  <Button onClick={handleReset} variant="outline" className="flex items-center">
+                  <Button onClick={handleReset} variant="outline" className="flex items-center justify-center">
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Reset
                   </Button>
-                  <Button onClick={handleSave} className="flex items-center">
+                  <Button onClick={handleSave} className="flex items-center justify-center">
                     <Save className="h-4 w-4 mr-2" />
                     Save Settings
                   </Button>
@@ -233,7 +237,7 @@ export default function BillCustomize() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
               {/* Settings Panel */}
               {!previewMode && (
                 <div className="space-y-6">
@@ -267,7 +271,7 @@ export default function BillCustomize() {
                           onChange={(e) => updateSetting('address', e.target.value)}
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="phone">Phone</Label>
                           <Input
@@ -294,7 +298,7 @@ export default function BillCustomize() {
                       <CardTitle>Print Settings</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="paperSize">Paper Size</Label>
                           <Select value={settings.paperSize} onValueChange={(value) => updateSetting('paperSize', value)}>
@@ -321,7 +325,7 @@ export default function BillCustomize() {
                           </Select>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="fontSize">Font Size</Label>
                           <Select value={settings.fontSize} onValueChange={(value) => updateSetting('fontSize', value)}>

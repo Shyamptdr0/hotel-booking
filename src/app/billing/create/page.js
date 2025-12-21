@@ -104,12 +104,43 @@ export default function CreateBill() {
   const calculateTax = () => {
     return cart.reduce((sum, item) => {
       const itemTotal = item.price * item.quantity
-      return sum + (itemTotal * item.tax / 100)
+      const sgstAmount = item.sgst ? (itemTotal * item.sgst / 100) : 0
+      const cgstAmount = item.cgst ? (itemTotal * item.cgst / 100) : 0
+      return sum + sgstAmount + cgstAmount
     }, 0)
   }
 
+  const calculateSgst = () => {
+    return cart.reduce((sum, item) => {
+      if (!item.sgst) return sum
+      return sum + (item.price * item.quantity * item.sgst / 100)
+    }, 0)
+  }
+
+  const calculateCgst = () => {
+    return cart.reduce((sum, item) => {
+      if (!item.cgst) return sum
+      return sum + (item.price * item.quantity * item.cgst / 100)
+    }, 0)
+  }
+
+  const calculateServiceTax = () => {
+    // Fixed service tax rate of 5% as shown in the image
+    const serviceTaxRate = 0.05
+    return cart.reduce((sum, item) => {
+      const itemTotal = item.price * item.quantity
+      return sum + (itemTotal * serviceTaxRate)
+    }, 0)
+  }
+
+  const calculateServiceTaxPerItem = (item) => {
+    const serviceTaxRate = 0.05
+    const itemTotal = item.price * item.quantity
+    return itemTotal * serviceTaxRate
+  }
+
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax()
+    return calculateSubtotal() + calculateTax() + calculateServiceTax()
   }
 
   const generateBill = async () => {
@@ -123,6 +154,7 @@ export default function CreateBill() {
     try {
       const subtotal = calculateSubtotal()
       const taxAmount = calculateTax()
+      const serviceTaxAmount = calculateServiceTax()
       const totalAmount = calculateTotal()
 
       const response = await fetch('/api/bills', {
@@ -130,13 +162,17 @@ export default function CreateBill() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subtotal,
+          sgst_amount: calculateSgst(),
+          cgst_amount: calculateCgst(),
           tax_amount: taxAmount,
+          service_tax_amount: serviceTaxAmount,
           total_amount: totalAmount,
           payment_type: paymentType,
           items: cart.map(item => ({
             id: item.id,
             quantity: item.quantity,
-            price: item.price
+            price: item.price,
+            service_tax: calculateServiceTaxPerItem(item)
           }))
         })
       })
@@ -164,7 +200,10 @@ export default function CreateBill() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4">
+              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            </div>
           </div>
         </div>
       </AuthGuard>
@@ -191,9 +230,9 @@ export default function CreateBill() {
               <p className="text-gray-600 text-sm lg:text-base">Add items and generate customer bill</p>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
               {/* Menu Items Section */}
-              <div className="lg:col-span-2">
+              <div className="flex-1">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -257,11 +296,18 @@ export default function CreateBill() {
                                 Add
                               </Button>
                             </div>
-                            <div className="flex justify-between items-center">
+                            <div className=" justify-between items-center">
                               <span className="font-semibold">₹{item.price.toFixed(2)}</span>
-                              {item.tax > 0 && (
-                                <span className="text-xs text-gray-500">{item.tax}% tax</span>
-                              )}
+                              <div className=" ">
+                                {item.tax > 0 && (
+                                  <span className="text-xs text-gray-500">{item.tax}% GST</span>
+                                )}
+                                {item.sgst > 0 && item.cgst > 0 && (
+                                  <span className="text-xs text-gray-500">
+                                    (SGST: {item.sgst}% + CGST: {item.cgst}%)
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))
@@ -272,8 +318,8 @@ export default function CreateBill() {
               </div>
 
               {/* Bill Summary Section */}
-              <div>
-                <Card>
+              <div className="min-h-[600px] w-[450px] ">
+                <Card className="h-full">
                   <CardHeader>
                     <CardTitle>Bill Summary</CardTitle>
                     <CardDescription>Review and generate bill</CardDescription>
@@ -287,13 +333,15 @@ export default function CreateBill() {
                     ) : (
                       <div className="space-y-4">
                         {/* Cart Items */}
-                        <div className="max-h-64 overflow-y-auto">
+                        <div>
                           <Table>
                             <TableHeader>
                               <TableRow>
                                 <TableHead>Item</TableHead>
                                 <TableHead>Qty</TableHead>
                                 <TableHead>Price</TableHead>
+                                <TableHead>SGST</TableHead>
+                                <TableHead>CGST</TableHead>
                                 <TableHead></TableHead>
                               </TableRow>
                             </TableHeader>
@@ -322,6 +370,14 @@ export default function CreateBill() {
                                   </TableCell>
                                   <TableCell>₹{(item.price * item.quantity).toFixed(2)}</TableCell>
                                   <TableCell>
+                                    {item.sgst ? `₹${(item.price * item.quantity * item.sgst / 100).toFixed(2)}` : '-'}
+                                    {item.sgst && <div className="text-xs text-gray-500">({item.sgst}%)</div>}
+                                  </TableCell>
+                                  <TableCell>
+                                    {item.cgst ? `₹${(item.price * item.quantity * item.cgst / 100).toFixed(2)}` : '-'}
+                                    {item.cgst && <div className="text-xs text-gray-500">({item.cgst}%)</div>}
+                                  </TableCell>
+                                  <TableCell>
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -343,7 +399,15 @@ export default function CreateBill() {
                             <span>₹{calculateSubtotal().toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Tax:</span>
+                            <span>SGST:</span>
+                            <span>₹{calculateSgst().toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>CGST:</span>
+                            <span>₹{calculateCgst().toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between font-medium">
+                            <span>Total Tax:</span>
                             <span>₹{calculateTax().toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between font-bold text-lg">

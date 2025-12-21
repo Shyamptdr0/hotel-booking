@@ -26,15 +26,39 @@ export async function GET(request, { params }) {
         *,
         menu_items (
           name,
-          tax
+          tax,
+          sgst,
+          cgst
         )
       `)
       .eq('bill_id', id)
 
     if (itemsError) throw itemsError
 
+    // Calculate SGST and CGST for each item
+    const itemsWithTaxes = (items || []).map(item => {
+      const itemTotal = item.price * item.quantity;
+      const sgstRate = item.menu_items?.sgst || 0;
+      const cgstRate = item.menu_items?.cgst || 0;
+      const sgstAmount = itemTotal * (sgstRate / 100);
+      const cgstAmount = itemTotal * (cgstRate / 100);
+      
+      return {
+        ...item,
+        sgst_amount: sgstAmount,
+        cgst_amount: cgstAmount,
+        total_tax: sgstAmount + cgstAmount,
+        total_amount: itemTotal + sgstAmount + cgstAmount
+      };
+    });
+
     return NextResponse.json({ 
-      data: { ...bill, items: items || [] }, 
+      data: { 
+        ...bill, 
+        items: itemsWithTaxes,
+        total_sgst: itemsWithTaxes.reduce((sum, item) => sum + (item.sgst_amount || 0), 0),
+        total_cgst: itemsWithTaxes.reduce((sum, item) => sum + (item.cgst_amount || 0), 0)
+      }, 
       error: null 
     })
   } catch (error) {

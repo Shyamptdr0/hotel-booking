@@ -31,6 +31,8 @@ export default function AddMenuItem() {
     category: '',
     price: '',
     tax: '0',
+    sgst: '0',
+    cgst: '0',
     status: 'active'
   })
   const [loading, setLoading] = useState(false)
@@ -94,6 +96,8 @@ export default function AddMenuItem() {
         category: '',
         price: '',
         tax: '0',
+        sgst: '0',
+        cgst: '0',
         status: 'active'
       })
       setEditingItem(null)
@@ -108,16 +112,31 @@ export default function AddMenuItem() {
     }
   }
 
+  const handleTaxChange = (e) => {
+    const taxValue = e.target.value;
+    const taxNum = parseFloat(taxValue) || 0;
+    const halfTax = (taxNum / 2).toFixed(2);
+    
+    setFormData(prev => ({
+      ...prev,
+      tax: taxValue,
+      sgst: halfTax,
+      cgst: halfTax
+    }));
+  };
+
   const handleEdit = (item) => {
     setFormData({
       name: item.name,
       category: item.category,
       price: item.price.toString(),
       tax: item.tax.toString(),
+      sgst: item.sgst ? item.sgst.toString() : (item.tax / 2).toFixed(2).toString(),
+      cgst: item.cgst ? item.cgst.toString() : (item.tax / 2).toFixed(2).toString(),
       status: item.status
-    })
-    setEditingItem(item)
-  }
+    });
+    setEditingItem(item);
+  };
 
   const handleDelete = async (id) => {
   if (!confirm('Are you sure you want to delete this item?')) return;
@@ -249,17 +268,23 @@ export default function AddMenuItem() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="tax">Tax (%)</Label>
+                        <Label htmlFor="tax">GST (%)</Label>
                         <Input
                           id="tax"
                           type="number"
                           step="0.1"
                           placeholder="0"
                           value={formData.tax}
-                          onChange={(e) => setFormData({ ...formData, tax: e.target.value })}
+                          onChange={handleTaxChange}
                         />
+                        {formData.tax > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Split as: SGST {formData.sgst}% + CGST {formData.cgst}%
+                          </p>
+                        )}
                       </div>
                     </div>
+
 
                     <div className="space-y-2">
                       <Label htmlFor="status">Status</Label>
@@ -292,6 +317,8 @@ export default function AddMenuItem() {
                               category: '',
                               price: '',
                               tax: '0',
+                              sgst: '0',
+                              cgst: '0',
                               status: 'active'
                             })
                           }}
@@ -324,7 +351,9 @@ export default function AddMenuItem() {
                             <h4 className="font-medium">{item.name}</h4>
                             <p className="text-sm text-gray-600">
                               {item.category} • ₹{item.price.toFixed(2)}
-                              {item.tax > 0 && ` • ₹${item.tax}% tax`}
+                              {item.tax > 0 && ` • ${item.tax}% tax`}
+                              {item.sgst > 0 && ` • SGST: ${item.sgst}%`}
+                              {item.cgst > 0 && ` • CGST: ${item.cgst}%`}
                             </p>
                           </div>
                           <div className="flex items-center space-x-2">

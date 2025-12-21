@@ -67,7 +67,7 @@ export function Navbar() {
       <div className="flex h-20 items-center px-6 border-b">
         <div className="flex items-center space-x-3">
           <ChefHat className="h-10 w-10 text-orange-600" />
-          <span className="text-xl font-bold text-gray-900">Pram Mitra Restaurant</span>
+          <span className="text-xl font-bold text-gray-900">ParamMitra Restaurant</span>
         </div>
       </div>
       
@@ -140,6 +140,11 @@ export function Navbar() {
             minute: '2-digit' 
           })}
         </div>
+      </div>
+      
+      {/* Logo in center */}
+      <div className="flex items-center justify-center">
+        <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-15 w-auto" />
       </div>
       
       <div className="flex items-center space-x-2 lg:space-x-4">

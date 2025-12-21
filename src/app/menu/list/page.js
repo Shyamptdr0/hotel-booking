@@ -123,7 +123,10 @@ export default function MenuList() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4">
+              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            </div>
           </div>
         </div>
       </AuthGuard>
@@ -221,6 +224,8 @@ export default function MenuList() {
                         <TableHead>Category</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Tax</TableHead>
+                        <TableHead>SGST</TableHead>
+                        <TableHead>CGST</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -232,6 +237,8 @@ export default function MenuList() {
                           <TableCell>{item.category}</TableCell>
                           <TableCell>₹{item.price.toFixed(2)}</TableCell>
                           <TableCell>{item.tax}%</TableCell>
+                          <TableCell>{item.sgst || 0}%</TableCell>
+                          <TableCell>{item.cgst || 0}%</TableCell>
                           <TableCell>
                             <Button
                               size="sm"

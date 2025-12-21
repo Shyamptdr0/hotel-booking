@@ -37,7 +37,10 @@ export function AuthGuard({ children }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+        <div className="flex flex-col items-center space-y-4">
+          <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+        </div>
       </div>
     )
   }

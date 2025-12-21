@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +25,7 @@ const formatCurrency = (value) => {
   }
 
 export default function BillHistory() {
+  const router = useRouter()
   const [bills, setBills] = useState([])
   const [filteredBills, setFilteredBills] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -123,7 +125,7 @@ export default function BillHistory() {
   }
 
   const handlePrint = (billId) => {
-    window.open(`/billing/print/${billId}`, '_blank')
+    router.push(`/billing/print/${billId}`)
   }
 
   if (loading) {
@@ -132,7 +134,10 @@ export default function BillHistory() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4">
+              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            </div>
           </div>
         </div>
       </AuthGuard>
@@ -296,7 +301,7 @@ export default function BillHistory() {
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
                             <div className="flex space-x-2">
-                              <Link href={`/billing/print/${bill.id}`}>
+                              <Link href={`/billing/view/${bill.id}`}>
                                 <Button size="sm" variant="outline">
                                   <Eye className="h-4 w-4 mr-1" />
                                   View

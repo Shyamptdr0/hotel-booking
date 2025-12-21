@@ -26,7 +26,6 @@ const navigation = [
   { name: 'Menu List', href: '/menu/list', icon: Utensils },
   { name: 'Create Bill', href: '/billing/create', icon: IndianRupee }, // Changed from Receipt to IndianRupee
   { name: 'Bill History', href: '/billing/history', icon: History },
-  { name: 'Print Settings', href: '/billing/customize', icon: Settings },
 ]
 
 export function Sidebar() {
@@ -55,7 +54,7 @@ export function Sidebar() {
       <div className="flex h-20 items-center px-6 border-b">
         <div className="flex items-center space-x-3">
           <ChefHat className="h-10 w-10 text-orange-600" />
-          <span className="text-xl lg:text-2xl font-bold text-gray-900">Pram Mitra Restaurant</span>
+          <span className="text-xl lg:text-2xl font-bold text-gray-900">ParamMitra Restaurant</span>
         </div>
       </div>
       

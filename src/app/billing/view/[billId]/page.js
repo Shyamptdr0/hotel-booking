@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button'
 import { AuthGuard } from '@/components/auth-guard'
 import { Sidebar } from '@/components/sidebar'
 import { Navbar } from '@/components/navbar'
+import { ArrowLeft, Home, Settings, Save } from 'lucide-react'
+import Link from 'next/link'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Printer, Home, Settings, Save } from 'lucide-react'
-import Link from 'next/link'
 
-export default function PrintBill() {
+export default function ViewBill() {
   const [bill, setBill] = useState(null)
   const [billItems, setBillItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -29,15 +29,6 @@ export default function PrintBill() {
     loadPrintSettings()
   }, [billId])
 
-  useEffect(() => {
-    if (bill && !loading && printSettings.autoPrint) {
-      // Auto print after component mounts
-      setTimeout(() => {
-        window.print()
-      }, 500)
-    }
-  }, [bill, loading, printSettings])
-
   const loadPrintSettings = () => {
     const savedSettings = localStorage.getItem('billPrintSettings')
     if (savedSettings) {
@@ -50,7 +41,7 @@ export default function PrintBill() {
         address: 'Mandleswar road Dhargoan',
         phone: '8085902662',
         fontSize: 'medium',
-        paperSize: '80mm', // Thermal receipt size - most common for restaurants
+        paperSize: '80mm',
         showLogo: true,
         showTax: true,
         showTimestamp: true,
@@ -66,12 +57,6 @@ export default function PrintBill() {
     }
   }
 
-  // Calculate service tax for an item (5% of item total)
-  const calculateServiceTaxPerItem = (item) => {
-    const serviceTaxRate = 0.05; // 5% service tax
-    return (item.price * item.quantity) * serviceTaxRate;
-  };
-
   const fetchBillDetails = async () => {
     try {
       const response = await fetch(`/api/bills/${billId}`)
@@ -86,14 +71,10 @@ export default function PrintBill() {
     } catch (error) {
       console.error('Error fetching bill details:', error)
       alert('Error loading bill: ' + error.message)
-      router.push('/billing/create')
+      router.push('/billing/history')
     } finally {
       setLoading(false)
     }
-  }
-
-  const handlePrint = () => {
-    window.print()
   }
 
   const handleNewBill = () => {
@@ -120,6 +101,42 @@ export default function PrintBill() {
     setTempSettings(prev => ({ ...prev, [key]: value }))
   }
 
+  const getFontSizeClass = () => {
+    switch (printSettings.fontSize) {
+      case 'small': return 'text-sm'
+      case 'large': return 'text-lg'
+      default: return 'text-base'
+    }
+  }
+
+  const getAlignmentClass = (alignment) => {
+    switch (alignment) {
+      case 'left': return 'text-left'
+      case 'right': return 'text-right'
+      default: return 'text-center'
+    }
+  }
+
+  const getPaperSizeClass = () => {
+    switch (printSettings.paperSize) {
+      case '57mm': return 'max-w-[200px]'
+      case '80mm': return 'max-w-[300px]'
+      case 'A4': return 'max-w-4xl'
+      case 'Letter': return 'max-w-4xl'
+      default: return 'max-w-[300px]'
+    }
+  }
+
+  const getPaperSizePadding = () => {
+    switch (printSettings.paperSize) {
+      case '57mm': return 'p-4'
+      case '80mm': return 'p-6'
+      case 'A4': return 'p-8'
+      case 'Letter': return 'p-8'
+      default: return 'p-6'
+    }
+  }
+
   if (loading) {
     return (
       <AuthGuard>
@@ -144,50 +161,14 @@ export default function PrintBill() {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p className="text-gray-500">Bill not found</p>
-              <Link href="/billing/create">
-                <Button className="mt-4">Create New Bill</Button>
+              <Link href="/billing/history">
+                <Button className="mt-4">Back to History</Button>
               </Link>
             </div>
           </div>
         </div>
       </AuthGuard>
     )
-  }
-
-  const getFontSizeClass = () => {
-    switch (printSettings.fontSize) {
-      case 'small': return 'text-sm'
-      case 'large': return 'text-lg'
-      default: return 'text-base'
-    }
-  }
-
-  const getAlignmentClass = (alignment) => {
-    switch (alignment) {
-      case 'left': return 'text-left'
-      case 'right': return 'text-right'
-      default: return 'text-center'
-    }
-  }
-
-  const getPaperSizeClass = () => {
-    switch (printSettings.paperSize) {
-      case '57mm': return 'max-w-[200px]' // 57mm thermal receipt
-      case '80mm': return 'max-w-[300px]' // 80mm thermal receipt (default)
-      case 'A4': return 'max-w-4xl' // A4 paper
-      case 'Letter': return 'max-w-4xl' // Letter paper
-      default: return 'max-w-[300px]' // Default to 80mm
-    }
-  }
-
-  const getPaperSizePadding = () => {
-    switch (printSettings.paperSize) {
-      case '57mm': return 'p-4' // Compact padding for 57mm
-      case '80mm': return 'p-6' // Standard padding for 80mm
-      case 'A4': return 'p-8' // Full padding for A4
-      case 'Letter': return 'p-8' // Full padding for Letter
-      default: return 'p-6' // Default to 80mm
-    }
   }
 
   return (
@@ -197,22 +178,23 @@ export default function PrintBill() {
         <div className="flex-1 flex flex-col">
           <Navbar />
           <main className="flex-1 p-6 overflow-auto">
-            {/* Control Buttons - Hidden when printing */}
-            <div className="no-print mb-6">
+            {/* Control Buttons */}
+            <div className="mb-6">
               <div className="flex items-center justify-between">
-                <Link href="/dashboard" className="flex items-center text-gray-600 hover:text-gray-900">
+                <Link href="/billing/history" className="flex items-center text-gray-600 hover:text-gray-900">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
+                  Back to History
                 </Link>
                 <div className="flex space-x-2">
                   <Button onClick={handleCustomize} variant="outline" className="flex items-center">
                     <Settings className="h-4 w-4 mr-2" />
                     Customize
                   </Button>
-                  <Button onClick={handlePrint} className="flex items-center">
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print Bill
-                  </Button>
+                  <Link href={`/billing/print/${billId}`}>
+                    <Button variant="outline" className="flex items-center">
+                      Print Bill
+                    </Button>
+                  </Link>
                   <Button onClick={handleNewBill} variant="outline" className="flex items-center">
                     <Home className="h-4 w-4 mr-2" />
                     New Bill
@@ -221,9 +203,9 @@ export default function PrintBill() {
               </div>
             </div>
 
-            {/* Customize Panel - Hidden when printing */}
+            {/* Customize Panel */}
             {showCustomize && (
-              <div className="no-print mb-6">
+              <div className="mb-6">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -260,7 +242,6 @@ export default function PrintBill() {
                             onChange={(e) => updateTempSetting('phone', e.target.value)}
                           />
                         </div>
-              
                       </div>
 
                       {/* Print Settings */}
@@ -296,19 +277,6 @@ export default function PrintBill() {
                         <div>
                           <Label htmlFor="headerAlignment">Header Alignment</Label>
                           <Select value={tempSettings.headerAlignment || 'center'} onValueChange={(value) => updateTempSetting('headerAlignment', value)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select alignment" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="left">Left</SelectItem>
-                              <SelectItem value="center">Center</SelectItem>
-                              <SelectItem value="right">Right</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="itemAlignment">Item Alignment</Label>
-                          <Select value={tempSettings.itemAlignment || 'left'} onValueChange={(value) => updateTempSetting('itemAlignment', value)}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select alignment" />
                             </SelectTrigger>
@@ -361,15 +329,6 @@ export default function PrintBill() {
                             />
                             <Label htmlFor="showPaymentMethod">Show Payment Method</Label>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="showWatermark"
-                              checked={tempSettings.showWatermark || false}
-                              onChange={(e) => updateTempSetting('showWatermark', e.target.checked)}
-                            />
-                            <Label htmlFor="showWatermark">Show Watermark</Label>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -389,10 +348,11 @@ export default function PrintBill() {
               </div>
             )}
 
-            {/* Printable Bill Content */}
+            {/* Bill Content */}
             <div className={`${getPaperSizeClass()} mx-auto`}>
-              <Card className="print-break">
-                <CardContent className={`${getPaperSizePadding()} ${getFontSizeClass()}`} style={{ color: printSettings.textColor }}>
+              <Card className="shadow-lg">
+                <CardContent className={`${getPaperSizePadding()} ${getFontSizeClass()}`} 
+                           style={{ color: printSettings.textColor }}>
                   {/* Restaurant Header */}
                   <div className={`mb-8 ${getAlignmentClass(printSettings.headerAlignment)}`}>
                     {printSettings.showLogo && (
@@ -400,14 +360,14 @@ export default function PrintBill() {
                         <div className="flex items-center space-x-2">
                           <div>
                             <h1 className="text-2xl font-bold">{printSettings.restaurantName}</h1>
-                            <p className="text-gray-600">{printSettings.restaurantTagline || 'Delicious Food, Great Service'}</p>
+                            <p className="text-gray-600">{printSettings.restaurantTagline}</p>
                           </div>
                         </div>
                       </div>
                     )}
                     <div className="text-sm text-gray-600">
                       <p>{printSettings.address}</p>
-                      <p>{printSettings.phone || '8085902662'} </p>
+                      <p>{printSettings.phone}</p>
                     </div>
                   </div>
 

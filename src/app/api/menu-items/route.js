@@ -35,7 +35,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { name, category, price, tax, status } = body
+    const { name, category, price, tax, sgst, cgst, status } = body
 
     if (!name || !category || !price) {
       return NextResponse.json(
@@ -51,6 +51,8 @@ export async function POST(request) {
         category,
         price: parseFloat(price),
         tax: parseFloat(tax) || 0,
+        sgst: parseFloat(sgst) || 0,
+        cgst: parseFloat(cgst) || 0,
         status: status || 'active'
       })
       .select()
@@ -67,7 +69,7 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const body = await request.json()
-    const { id, name, category, price, tax, status } = body
+    const { id, name, category, price, tax, sgst, cgst, status } = body
 
     if (!id) {
       return NextResponse.json(
@@ -83,6 +85,8 @@ export async function PUT(request) {
         category,
         price: parseFloat(price),
         tax: parseFloat(tax) || 0,
+        sgst: parseFloat(sgst) || 0,
+        cgst: parseFloat(cgst) || 0,
         status: status || 'active'
       })
       .eq('id', id)

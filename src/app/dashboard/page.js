@@ -697,7 +697,10 @@ export default function Dashboard() {
     return (
       <AuthGuard>
         <div className="flex h-screen items-center justify-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-orange-600" />
+          <div className="flex flex-col items-center space-y-4">
+            <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
+            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-orange-600" />
+          </div>
         </div>
       </AuthGuard>
     )

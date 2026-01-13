@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { formatPaymentType } from '@/lib/utils'
 
 export default function ViewBill() {
   const [bill, setBill] = useState(null)
@@ -400,7 +401,7 @@ export default function ViewBill() {
                     </div>
                     {currentSettings.showPaymentMethod && (
                       <div className="mt-2">
-                        <p className="text-sm text-gray-600">Payment: {bill.payment_type?.toUpperCase()}</p>
+                        <p className="text-sm text-gray-600">Payment: {formatPaymentType(bill.payment_type)}</p>
                       </div>
                     )}
                   </div>
@@ -422,7 +423,7 @@ export default function ViewBill() {
                           
                           return (
                             <tr key={index} className="border-b border-gray-100">
-                              <td className="py-1">{item.menu_items?.name || `Item ${index + 1}`}</td>
+                              <td className="py-1">{item.item_name || `Item ${index + 1}`}</td>
                               <td className="text-right px-1">{item.quantity}</td>
                               <td className="text-right px-1">₹{item.price.toFixed(2)}</td>
                               <td className="text-right px-1">₹{itemTotal.toFixed(2)}</td>
@@ -448,13 +449,13 @@ export default function ViewBill() {
                         <>
                           {bill.total_sgst > 0 && (
                             <div className="flex justify-between">
-                              <span>SGST ({(bill.total_sgst / bill.subtotal * 100).toFixed(2)}%):</span>
+                              <span>SGST (2.5%):</span>
                               <span>₹{parseFloat(bill.total_sgst).toFixed(2)}</span>
                             </div>
                           )}
                           {bill.total_cgst > 0 && (
                             <div className="flex justify-between">
-                              <span>CGST ({(bill.total_cgst / bill.subtotal * 100).toFixed(2)}%):</span>
+                              <span>CGST (2.5%):</span>
                               <span>₹{parseFloat(bill.total_cgst).toFixed(2)}</span>
                             </div>
                           )}

@@ -12,6 +12,7 @@ import { Sidebar } from '@/components/sidebar'
 import { Navbar } from '@/components/navbar'
 import { ArrowLeft, Search, Eye, Printer, Calendar, IndianRupee } from 'lucide-react'
 import Link from 'next/link'
+import { formatPaymentType } from '@/lib/utils'
 
 
 const formatCurrency = (value) => {
@@ -230,8 +231,7 @@ export default function BillHistory() {
                   <SelectContent>
                     <SelectItem value="all">All Payments</SelectItem>
                     <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="upi">Online</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
@@ -296,7 +296,7 @@ export default function BillHistory() {
                             </TableCell>
                             <TableCell className="whitespace-nowrap">
                               <span className="capitalize px-2 py-1 bg-gray-100 rounded text-sm">
-                              {bill.payment_type}
+                              {formatPaymentType(bill.payment_type)}
                             </span>
                           </TableCell>
                           <TableCell className="whitespace-nowrap">

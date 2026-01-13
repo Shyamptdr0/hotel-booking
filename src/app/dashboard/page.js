@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { formatPaymentType } from '@/lib/utils'
 import {
   IndianRupee,
   ShoppingCart,
@@ -53,6 +54,7 @@ import {
   ThumbsUp,
   Heart,
   ShoppingCart as CartIcon,
+  CreditCard,
 } from 'lucide-react'
 
 import {
@@ -915,7 +917,7 @@ export default function Dashboard() {
                                   {formatCurrency(bill.total_amount)}
                                 </span>
                                 <span className="px-2 py-1 bg-gray-100 rounded text-sm capitalize">
-                                  {bill.payment_type || 'cash'}
+                                  {formatPaymentType(bill.payment_type)}
                                 </span>
                               </div>
                             </div>

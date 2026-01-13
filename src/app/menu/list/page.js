@@ -70,7 +70,7 @@ export default function MenuList() {
   }
 
  const handleDelete = async (id) => {
-  if (!confirm('Are you sure you want to delete this item?')) return;
+  if (!confirm('Are you sure you want to deactivate this item? It will no longer be available for new bills but will remain in existing bills.')) return;
 
   try {
     const response = await fetch(`/api/menu-items?id=${id}`, {
@@ -85,8 +85,8 @@ export default function MenuList() {
 
     await fetchMenuItems();
   } catch (error) {
-    console.error('Error deleting menu item:', error);
-    alert('Error deleting menu item: ' + error.message);
+    console.error('Error deactivating menu item:', error);
+    alert('Error deactivating menu item: ' + error.message);
   }
 };
 
@@ -223,9 +223,6 @@ export default function MenuList() {
                         <TableHead>Name</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead>Price</TableHead>
-                        <TableHead>Tax</TableHead>
-                        <TableHead>SGST</TableHead>
-                        <TableHead>CGST</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -236,9 +233,6 @@ export default function MenuList() {
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>{item.category}</TableCell>
                           <TableCell>₹{item.price.toFixed(2)}</TableCell>
-                          <TableCell>{item.tax}%</TableCell>
-                          <TableCell>{item.sgst || 0}%</TableCell>
-                          <TableCell>{item.cgst || 0}%</TableCell>
                           <TableCell>
                             <Button
                               size="sm"

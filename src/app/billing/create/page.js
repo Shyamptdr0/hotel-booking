@@ -111,26 +111,22 @@ export default function CreateBill() {
   }
 
   const calculateTax = () => {
-    return cart.reduce((sum, item) => {
-      const itemTotal = item.price * item.quantity
-      const sgstAmount = item.sgst ? (itemTotal * item.sgst / 100) : 0
-      const cgstAmount = item.cgst ? (itemTotal * item.cgst / 100) : 0
-      return sum + sgstAmount + cgstAmount
-    }, 0) // No rounding for tax
+    // Calculate 5% GST on total subtotal and split equally
+    const subtotal = calculateSubtotal()
+    const totalGst = subtotal * 0.05 // 5% of subtotal
+    return totalGst
   }
 
   const calculateSgst = () => {
-    return cart.reduce((sum, item) => {
-      if (!item.sgst) return sum
-      return sum + (item.price * item.quantity * item.sgst / 100)
-    }, 0) // No rounding for SGST
+    // Calculate 2.5% SGST on total subtotal
+    const subtotal = calculateSubtotal()
+    return subtotal * 0.025 // 2.5% of subtotal
   }
 
   const calculateCgst = () => {
-    return cart.reduce((sum, item) => {
-      if (!item.cgst) return sum
-      return sum + (item.price * item.quantity * item.cgst / 100)
-    }, 0) // No rounding for CGST
+    // Calculate 2.5% CGST on total subtotal
+    const subtotal = calculateSubtotal()
+    return subtotal * 0.025 // 2.5% of subtotal
   }
 
   const calculateServiceTax = () => {
@@ -149,7 +145,8 @@ export default function CreateBill() {
   }
 
   const calculateTotal = () => {
-    const total = calculateSubtotal() + calculateTax() + calculateServiceTax()
+    // Only include subtotal + GST (service tax removed from storage)
+    const total = calculateSubtotal() + calculateTax()
     return roundUpToNext(total) // Only round the total amount
   }
 
@@ -172,17 +169,15 @@ export default function CreateBill() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subtotal,
-          sgst_amount: calculateSgst(),
-          cgst_amount: calculateCgst(),
           tax_amount: taxAmount,
-          service_tax_amount: serviceTaxAmount,
           total_amount: totalAmount,
           payment_type: paymentType,
           items: cart.map(item => ({
             id: item.id,
+            name: item.name,
+            category: item.category,
             quantity: item.quantity,
-            price: item.price,
-            service_tax: calculateServiceTaxPerItem(item)
+            price: item.price
           }))
         })
       })
@@ -308,16 +303,6 @@ export default function CreateBill() {
                             </div>
                             <div className=" justify-between items-center">
                               <span className="font-semibold">₹{item.price.toFixed(2)}</span>
-                              <div className=" ">
-                                {item.tax > 0 && (
-                                  <span className="text-xs text-gray-500">{item.tax}% GST</span>
-                                )}
-                                {item.sgst > 0 && item.cgst > 0 && (
-                                  <span className="text-xs text-gray-500">
-                                    (SGST: {item.sgst}% + CGST: {item.cgst}%)
-                                  </span>
-                                )}
-                              </div>
                             </div>
                           </div>
                         ))
@@ -350,8 +335,6 @@ export default function CreateBill() {
                                 <TableHead>Item</TableHead>
                                 <TableHead>Qty</TableHead>
                                 <TableHead>Price</TableHead>
-                                <TableHead>SGST</TableHead>
-                                <TableHead>CGST</TableHead>
                                 <TableHead></TableHead>
                               </TableRow>
                             </TableHeader>
@@ -379,14 +362,6 @@ export default function CreateBill() {
                                     </div>
                                   </TableCell>
                                   <TableCell>₹{(item.price * item.quantity).toFixed(2)}</TableCell>
-                                  <TableCell>
-                                    {item.sgst ? `₹${(item.price * item.quantity * item.sgst / 100).toFixed(2)}` : '-'}
-                                    {item.sgst && <div className="text-xs text-gray-500">({item.sgst}%)</div>}
-                                  </TableCell>
-                                  <TableCell>
-                                    {item.cgst ? `₹${(item.price * item.quantity * item.cgst / 100).toFixed(2)}` : '-'}
-                                    {item.cgst && <div className="text-xs text-gray-500">({item.cgst}%)</div>}
-                                  </TableCell>
                                   <TableCell>
                                     <Button
                                       size="sm"
@@ -435,8 +410,7 @@ export default function CreateBill() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="cash">Cash</SelectItem>
-                              <SelectItem value="upi">UPI</SelectItem>
-                              <SelectItem value="card">Card</SelectItem>
+                              <SelectItem value="upi">Online</SelectItem>
                               <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                           </Select>

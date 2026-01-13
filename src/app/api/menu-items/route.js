@@ -35,7 +35,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { name, category, price, tax, sgst, cgst, status } = body
+    const { name, category, price, status } = body
 
     if (!name || !category || !price) {
       return NextResponse.json(
@@ -50,9 +50,9 @@ export async function POST(request) {
         name,
         category,
         price: parseFloat(price),
-        tax: parseFloat(tax) || 0,
-        sgst: parseFloat(sgst) || 0,
-        cgst: parseFloat(cgst) || 0,
+        tax: 5, // Default 5% total tax
+        sgst: 2.5, // Default 2.5% SGST
+        cgst: 2.5, // Default 2.5% CGST
         status: status || 'active'
       })
       .select()
@@ -69,7 +69,7 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const body = await request.json()
-    const { id, name, category, price, tax, sgst, cgst, status } = body
+    const { id, name, category, price, status } = body
 
     if (!id) {
       return NextResponse.json(
@@ -84,9 +84,9 @@ export async function PUT(request) {
         name,
         category,
         price: parseFloat(price),
-        tax: parseFloat(tax) || 0,
-        sgst: parseFloat(sgst) || 0,
-        cgst: parseFloat(cgst) || 0,
+        tax: 5, // Default 5% total tax
+        sgst: 2.5, // Default 2.5% SGST
+        cgst: 2.5, // Default 2.5% CGST
         status: status || 'active'
       })
       .eq('id', id)
@@ -113,6 +113,7 @@ export async function DELETE(request) {
       )
     }
 
+    // Hard delete since foreign key constraint is removed from bill_items
     const { data, error } = await supabase
       .from('menu_items')
       .delete()

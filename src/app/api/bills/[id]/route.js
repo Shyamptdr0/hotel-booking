@@ -19,32 +19,24 @@ export async function GET(request, { params }) {
 
     if (billError) throw billError
 
-    // Fetch bill items with menu item details
+    // Fetch bill items using stored snapshot data
     const { data: items, error: itemsError } = await supabase
       .from('bill_items')
-      .select(`
-        *,
-        menu_items (
-          name,
-          tax,
-          sgst,
-          cgst
-        )
-      `)
+      .select('*')
       .eq('bill_id', id)
 
     if (itemsError) throw itemsError
 
-    // Calculate SGST and CGST for each item
+    // Calculate SGST and CGST for each item using bill data directly
     const itemsWithTaxes = (items || []).map(item => {
       const itemTotal = item.price * item.quantity;
-      const sgstRate = item.menu_items?.sgst || 0;
-      const cgstRate = item.menu_items?.cgst || 0;
-      const sgstAmount = itemTotal * (sgstRate / 100);
-      const cgstAmount = itemTotal * (cgstRate / 100);
+      // Use default GST rates since menu item might be inactive
+      const sgstAmount = itemTotal * 0.025; // 2.5% of item total
+      const cgstAmount = itemTotal * 0.025; // 2.5% of item total
       
       return {
         ...item,
+        name: item.item_name || `Item ${item.id}`,
         sgst_amount: sgstAmount,
         cgst_amount: cgstAmount,
         total_tax: sgstAmount + cgstAmount,
@@ -52,12 +44,17 @@ export async function GET(request, { params }) {
       };
     });
 
+    // Calculate SGST and CGST amounts from subtotal (since they're not stored in DB)
+    const subtotal = bill.subtotal || 0;
+    const totalSgst = subtotal * 0.025; // 2.5% of subtotal
+    const totalCgst = subtotal * 0.025; // 2.5% of subtotal
+
     return NextResponse.json({ 
       data: { 
         ...bill, 
         items: itemsWithTaxes,
-        total_sgst: itemsWithTaxes.reduce((sum, item) => sum + (item.sgst_amount || 0), 0),
-        total_cgst: itemsWithTaxes.reduce((sum, item) => sum + (item.cgst_amount || 0), 0)
+        total_sgst: totalSgst,
+        total_cgst: totalCgst
       }, 
       error: null 
     })

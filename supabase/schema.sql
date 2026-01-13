@@ -26,9 +26,11 @@ CREATE TABLE bills (
 CREATE TABLE bill_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   bill_id UUID REFERENCES bills(id) ON DELETE CASCADE,
-  item_id UUID REFERENCES menu_items(id),
+  item_id UUID, -- Remove foreign key constraint to allow menu item deletion
+  item_name TEXT NOT NULL, -- Store item name as snapshot
+  item_category TEXT, -- Store item category as snapshot
   quantity INTEGER NOT NULL,
-  price NUMERIC(10,2) NOT NULL,
+  price NUMERIC(10,2) NOT NULL, -- Store price at time of billing
   total NUMERIC(10,2) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

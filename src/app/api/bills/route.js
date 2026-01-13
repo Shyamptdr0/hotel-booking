@@ -66,7 +66,7 @@ export async function POST(request) {
       )
     }
 
-    // Create the bill
+    // Create bill (remove service_tax_amount as it doesn't exist in schema)
     const { data: bill, error: billError } = await supabase
       .from('bills')
       .insert({
@@ -80,10 +80,12 @@ export async function POST(request) {
 
     if (billError) throw billError
 
-    // Create bill items
+    // Create bill items with snapshots
     const billItems = items.map(item => ({
       bill_id: bill.id,
       item_id: item.id,
+      item_name: item.name, // Store item name as snapshot
+      item_category: item.category, // Store item category as snapshot
       quantity: item.quantity,
       price: item.price,
       total: item.price * item.quantity

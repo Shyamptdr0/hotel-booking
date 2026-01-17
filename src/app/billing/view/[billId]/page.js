@@ -51,7 +51,7 @@ export default function ViewBill() {
         primaryColor: '#ea580c',
         textColor: '#111827',
         showPaymentMethod: true,
-        showWatermark: false,
+        showWatermark: true,
         watermarkText: 'Thank you for visiting!',
         autoPrint: false
       })
@@ -194,7 +194,7 @@ export default function ViewBill() {
             {/* Control Buttons */}
             <div className="mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <Link href="/billing/history" className="flex items-center text-gray-600 hover:text-gray-900">
+                <Link href="/billing/history" className="flex items-center text-black hover:text-gray-900">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to History
                 </Link>
@@ -374,12 +374,12 @@ export default function ViewBill() {
                         <div className="flex items-center space-x-2">
                           <div>
                             <h1 className="text-2xl font-bold">{currentSettings.restaurantName}</h1>
-                            <p className="text-gray-600">{currentSettings.restaurantTagline}</p>
+                            <p className="text-black">{currentSettings.restaurantTagline}</p>
                           </div>
                         </div>
                       </div>
                     )}
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-black">
                       <p>{currentSettings.address}</p>
                       <p>{currentSettings.phone}</p>
                     </div>
@@ -390,18 +390,18 @@ export default function ViewBill() {
                     <div className="flex justify-between items-center mb-2">
                       <div>
                         <h2 className="text-xl font-bold">BILL</h2>
-                        <p className="text-sm text-gray-600">Bill No: #{bill.bill_no}</p>
+                        <p className="text-sm text-black">Bill No: #{bill.bill_no}</p>
                       </div>
                       {currentSettings.showTimestamp && (
                         <div className="text-right">
-                          <p className="text-sm text-gray-600">Date: {new Date(bill.created_at).toLocaleDateString()}</p>
-                          <p className="text-sm text-gray-600">Time: {new Date(bill.created_at).toLocaleTimeString()}</p>
+                          <p className="text-sm text-black">Date: {new Date(bill.created_at).toLocaleDateString()}</p>
+                          <p className="text-sm text-black">Time: {new Date(bill.created_at).toLocaleTimeString()}</p>
                         </div>
                       )}
                     </div>
                     {currentSettings.showPaymentMethod && (
                       <div className="mt-2">
-                        <p className="text-sm text-gray-600">Payment: {formatPaymentType(bill.payment_type)}</p>
+                        <p className="text-sm text-black">Payment: {formatPaymentType(bill.payment_type)}</p>
                       </div>
                     )}
                   </div>
@@ -474,7 +474,7 @@ export default function ViewBill() {
                       <div className="border-t pt-2 mt-2">
                         <div className="flex justify-between font-bold text-lg">
                           <span>Total:</span>
-                          <span style={{ color: currentSettings.primaryColor }}>
+                          <span style={{ color: 'black' }}>
                             ₹{parseFloat(bill.total_amount).toFixed(2)}
                           </span>
                         </div>
@@ -483,7 +483,7 @@ export default function ViewBill() {
                   </div>
 
                   {currentSettings.showWatermark && (
-                    <div className="text-center mt-6 text-gray-400 text-sm">
+                    <div className="text-center mt-6 text-black text-sm">
                       {currentSettings.watermarkText}
                     </div>
                   )}

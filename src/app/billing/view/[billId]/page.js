@@ -39,8 +39,9 @@ export default function ViewBill() {
       setPrintSettings({
         restaurantName: 'Param Mitra Family Restaurant',
         restaurantTagline: 'Delicious Food, Great Service',
-        address: 'Mandleswar road Dhargoan',
+        address: 'Barwaha Maheshwar road, Dhargaon',
         phone: '8085902662',
+        gstNumber: '23EQDPP8494L1Z3',
         fontSize: 'medium',
         paperSize: '80mm',
         showLogo: true,
@@ -256,6 +257,14 @@ export default function ViewBill() {
                             onChange={(e) => updateTempSetting('phone', e.target.value)}
                           />
                         </div>
+                        <div>
+                          <Label htmlFor="gstNumber">GST Number</Label>
+                          <Input
+                            id="gstNumber"
+                            value={tempSettings.gstNumber || ''}
+                            onChange={(e) => updateTempSetting('gstNumber', e.target.value)}
+                          />
+                        </div>
                       </div>
 
                       {/* Print Settings */}
@@ -382,6 +391,7 @@ export default function ViewBill() {
                     <div className="text-sm text-black">
                       <p>{currentSettings.address}</p>
                       <p>{currentSettings.phone}</p>
+                      <p>GSTIN: {currentSettings.gstNumber}</p>
                     </div>
                   </div>
 

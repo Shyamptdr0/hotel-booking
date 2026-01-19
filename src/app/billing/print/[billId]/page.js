@@ -48,8 +48,9 @@ export default function PrintBill() {
       setPrintSettings({
         restaurantName: 'Param Mitra Family Restaurant',
         restaurantTagline: 'Delicious Food, Great Service',
-        address: 'Mandleswar road Dhargoan',
+        address: 'Barwaha Maheshwar road, Dhargaon',
         phone: '8085902662',
+        gstNumber: '23EQDPP8494L1Z3',
         fontSize: 'medium',
         paperSize: '80mm', // Thermal receipt size - most common for restaurants
         showLogo: true,
@@ -163,10 +164,12 @@ export default function PrintBill() {
   const currentSettings = showCustomize ? tempSettings : printSettings
 
   const getFontSizeClass = () => {
-    switch (currentSettings.fontSize) {
-      case 'small': return 'text-sm'
-      case 'large': return 'text-lg'
-      default: return 'text-base'
+    switch (currentSettings.paperSize) {
+      case '57mm': return 'text-xs' // Smaller font for 57mm
+      case '80mm': return 'text-xs' // Smaller font for 80mm to fit single page
+      case 'A4': return 'text-sm' // Small font for A4
+      case 'Letter': return 'text-sm' // Small font for Letter
+      default: return 'text-xs' // Default to smaller font
     }
   }
 
@@ -271,6 +274,14 @@ export default function PrintBill() {
                             id="phone"
                             value={tempSettings.phone || ''}
                             onChange={(e) => updateTempSetting('phone', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="gstNumber">GST Number</Label>
+                          <Input
+                            id="gstNumber"
+                            value={tempSettings.gstNumber || ''}
+                            onChange={(e) => updateTempSetting('gstNumber', e.target.value)}
                           />
                         </div>
               
@@ -405,55 +416,56 @@ export default function PrintBill() {
             {/* Printable Bill Content */}
             <div className={`${getPaperSizeClass()} mx-auto px-2 sm:px-0 print-only-content`}>
               <Card className="print-break">
-                <CardContent className={`${getPaperSizePadding()} ${getFontSizeClass()}`} style={{ color: currentSettings.textColor }}>
+                <CardContent className={`${getPaperSizePadding()} ${getFontSizeClass()} print-break`} style={{ color: currentSettings.textColor }}>
                   {/* Restaurant Header */}
-                  <div className={`mb-8 ${getAlignmentClass(currentSettings.headerAlignment)}`}>
+                  <div className={`mb-4 ${getAlignmentClass(currentSettings.headerAlignment)}`}>
                     {currentSettings.showLogo && (
-                      <div className="flex justify-center mb-4">
+                      <div className="flex justify-center mb-2">
                         <div className="flex items-center space-x-2">
                           <div>
-                            <h1 className="text-2xl font-bold">{currentSettings.restaurantName}</h1>
-                            <p className="text-black ">{currentSettings.restaurantTagline || 'Delicious Food, Great Service'}</p>
+                            <h1 className="text-sm font-bold">{currentSettings.restaurantName}</h1>
+                            <p className="text-xs text-black">{currentSettings.restaurantTagline || 'Delicious Food, Great Service'}</p>
                           </div>
                         </div>
                       </div>
                     )}
-                    <div className="text-sm text-black">
+                    <div className="text-xs text-black">
                       <p>{currentSettings.address}</p>
-                      <p>{currentSettings.phone || '8085902662'} </p>
+                      <p>{currentSettings.phone}</p>
+                      <p>GSTIN: {currentSettings.gstNumber}</p>
                     </div>
                   </div>
 
                   {/* Bill Details */}
-                  <div className="border-t border-b py-4 mb-6">
-                    <div className="flex justify-between items-center mb-2">
+                  <div className="border-t border-b py-2 mb-3">
+                    <div className="flex justify-between items-center mb-1">
                       <div>
-                        <h2 className="text-xl font-bold">BILL</h2>
-                        <p className="text-sm text-black">Bill No: #{bill.bill_no}</p>
+                        <h2 className="text-sm font-bold">BILL</h2>
+                        <p className="text-xs text-black">Bill No: #{bill.bill_no}</p>
                       </div>
                       {currentSettings.showTimestamp && (
                         <div className="text-right">
-                          <p className="text-sm text-black">Date: {new Date(bill.created_at).toLocaleDateString()}</p>
-                          <p className="text-sm text-black">Time: {new Date(bill.created_at).toLocaleTimeString()}</p>
+                          <p className="text-xs text-black">Date: {new Date(bill.created_at).toLocaleDateString()}</p>
+                          <p className="text-xs text-black">Time: {new Date(bill.created_at).toLocaleTimeString()}</p>
                         </div>
                       )}
                     </div>
                     {currentSettings.showPaymentMethod && (
-                      <div className="mt-2">
-                        <p className="text-sm text-black">Payment: {formatPaymentType(bill.payment_type)}</p>
+                      <div className="mt-1">
+                        <p className="text-xs text-black">Payment: {formatPaymentType(bill.payment_type)}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Bill Items */}
-                  <div className="mb-6">
-                    <table className="w-full">
+                  <div className="mb-3">
+                    <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left pb-2">Item</th>
-                          <th className="text-right px-1 pb-2">Qty</th>
-                          <th className="text-right px-1 pb-2">Rate</th>
-                          <th className="text-right px-1 pb-2">Total Amt</th>
+                          <th className="text-left pb-1">Item</th>
+                          <th className="text-right px-1 pb-1">Qty</th>
+                          <th className="text-right px-1 pb-1">Rate</th>
+                          <th className="text-right px-1 pb-1">Total</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -461,7 +473,7 @@ export default function PrintBill() {
                           const itemTotal = (item.price * item.quantity);
                           
                           return (
-                            <tr key={index} className="border-b border-gray-100">
+                            <tr key={index} className="border-b border-gray-100 print-no-break">
                               <td className="py-1">{item.item_name || `Item ${index + 1}`}</td>
                               <td className="text-right px-1">{item.quantity}</td>
                               <td className="text-right px-1">₹{item.price.toFixed(2)}</td>
@@ -474,8 +486,8 @@ export default function PrintBill() {
                   </div>
 
                   {/* Totals */}
-                  <div className="border-t pt-4">
-                    <div className="space-y-2">
+                  <div className="border-t pt-2">
+                    <div className="space-y-1 text-xs">
                       <div className="flex justify-between border-b pb-1 mb-1">
                         <span>Total Items:</span>
                         <span>{billItems.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0)}</span>
@@ -510,8 +522,8 @@ export default function PrintBill() {
                           )}
                         </>
                       )}
-                      <div className="border-t pt-2 mt-2">
-                        <div className="flex justify-between font-bold text-lg">
+                      <div className="border-t pt-1 mt-1">
+                        <div className="flex justify-between font-bold text-sm">
                           <span>Total:</span>
                           <span style={{ color: 'black' }}>
                             ₹{parseFloat(bill.total_amount).toFixed(2)}
@@ -522,7 +534,7 @@ export default function PrintBill() {
                   </div>
 
                   {currentSettings.showWatermark && (
-                    <div className="text-center mt-6 text-black text-sm">
+                    <div className="text-center mt-2 text-black text-xs">
                       {currentSettings.watermarkText}
                     </div>
                   )}

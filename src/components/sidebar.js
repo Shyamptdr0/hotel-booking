@@ -15,15 +15,18 @@ import {
   LogOut,
   ChefHat,
   Settings,
-  X
+  X,
+  Table
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Add Menu Item', href: '/menu/add', icon: PlusCircle },
   { name: 'Menu List', href: '/menu/list', icon: Utensils },
+  { name: 'Tables', href: '/tables', icon: Table },
   { name: 'Create Bill', href: '/billing/create', icon: IndianRupee }, // Changed from Receipt to IndianRupee
   { name: 'Bill History', href: '/billing/history', icon: History },
+  
 ]
 
 export function Sidebar() {

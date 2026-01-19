@@ -121,31 +121,110 @@
     visibility: hidden;
   }
   
-  /* Show only the bill content and its children */
+  /* Show only bill content and its children */
   .print-only-content,
   .print-only-content * {
     visibility: visible;
   }
   
-  /* Position the bill content correctly */
+  /* Position bill content correctly */
   .print-only-content {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 5px 0;
+    overflow: hidden;
   }
   
-  /* Ensure proper print formatting */
+  /* Force single page printing - aggressive approach */
   body {
     margin: 0;
     padding: 0;
     background: white !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+    font-size: 10px;
+    line-height: 1.1;
+    transform: scale(0.85);
+    transform-origin: top left;
   }
 
+  /* Prevent page breaks completely */
   .print-break {
-    page-break-inside: avoid;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    break-inside: avoid !important;
+    break-after: avoid !important;
+    break-before: avoid !important;
+    orphans: 0 !important;
+    widows: 0 !important;
+    overflow: hidden !important;
+    height: auto !important;
+    max-height: 95vh !important;
+  }
+
+  /* Ensure card doesn't break */
+  .print-break > div {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Force single page with strict size */
+  @page {
+    size: auto;
+    margin: 2mm;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Hide control buttons */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Thermal printer specific optimizations */
+  .print-only-content * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure tables don't break */
+  table {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    font-size: 9px !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  td {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Additional print break prevention */
+  .print-no-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+  }
+
+  /* Scale content to fit page */
+  .print-only-content > div {
+    max-height: 90vh !important;
+    overflow: hidden !important;
+    transform: scale(0.8);
+    transform-origin: top center;
   }
 }
 

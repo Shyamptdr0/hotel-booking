@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +13,7 @@ import { Sidebar } from '@/components/sidebar'
 import { Navbar } from '@/components/navbar'
 import { Plus, Minus, Trash2, Save, ArrowLeft, Utensils, RotateCcw } from 'lucide-react'
 
-export default function BillingPage() {
+function BillingPageContent() {
   const searchParams = useSearchParams()
   const tableId = searchParams.get('tableId')
   const tableName = searchParams.get('tableName')
@@ -455,5 +455,13 @@ export default function BillingPage() {
         </div>
       </div>
     </AuthGuard>
+  )
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BillingPageContent />
+    </Suspense>
   )
 }

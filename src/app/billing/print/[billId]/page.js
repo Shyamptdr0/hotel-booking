@@ -35,6 +35,10 @@ export default function PrintBill() {
       // Auto print after component mounts
       setTimeout(() => {
         window.print()
+        // Redirect after auto print
+        setTimeout(() => {
+          router.push('/tables')
+        }, 1000)
       }, 500)
     }
   }, [bill, loading, printSettings])
@@ -106,11 +110,44 @@ export default function PrintBill() {
     }
   }
 
-  const handlePrint = () => {
-    // Ensure print dialog opens with proper settings
-    setTimeout(() => {
+  const handlePrint = async () => {
+    try {
+      // Update bill status to printed
+      await fetch(`/api/bills/${billId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'printed' })
+      })
+      
+      // Update table status to printed if bill has table_id
+      if (bill && bill.table_id) {
+        await fetch(`/api/tables/${bill.table_id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: bill.table_name,
+            section: bill.section,
+            status: 'printed'
+          })
+        })
+      }
+      
+      // Open print dialog and redirect immediately
       window.print()
-    }, 100)
+      
+      // Redirect to tables page after printing
+      setTimeout(() => {
+        router.push('/tables')
+      }, 1500)
+      
+    } catch (error) {
+      console.error('Error updating status before print:', error)
+      // Still print and navigate even if status update fails
+      window.print()
+      setTimeout(() => {
+        router.push('/tables')
+      }, 1500)
+    }
   }
 
   const handleNewBill = () => {
@@ -231,9 +268,9 @@ export default function PrintBill() {
             {/* Control Buttons - Hidden when printing */}
             <div className="no-print mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <Link href="/dashboard" className="flex items-center text-black hover:text-gray-900">
+                <Link href="/billing/history" className="flex items-center text-black hover:text-gray-900">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
+                  Back to Bill History
                 </Link>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button onClick={handleCustomize} variant="outline" className="flex items-center justify-center">
@@ -457,6 +494,9 @@ export default function PrintBill() {
                       <div>
                         <h2 className="text-sm font-bold">BILL</h2>
                         <p className="text-xs text-black">Bill No: #{bill.bill_no}</p>
+                        {bill.table_name && (
+                          <p className="text-xs text-black">Table: {bill.table_name} ({bill.section})</p>
+                        )}
                       </div>
                       {currentSettings.showTimestamp && (
                         <div className="text-right">
@@ -513,22 +553,6 @@ export default function PrintBill() {
                       </div>
                       {currentSettings.showTax && (
                         <>
-                          {bill.total_sgst > 0 && (
-                            <div className="flex justify-between">
-                              <span>SGST (2.5%):</span>
-                              <span>₹{parseFloat(bill.total_sgst).toFixed(2)}</span>
-                            </div>
-                          )}
-                          {bill.total_cgst > 0 && (
-                            <div className="flex justify-between">
-                              <span>CGST (2.5%):</span>
-                              <span>₹{parseFloat(bill.total_cgst).toFixed(2)}</span>
-                            </div>
-                          )}
-                          <div className="flex justify-between font-medium">
-                            <span>Total Selling Tax:</span>
-                            <span>₹{((bill.total_sgst || 0) + (bill.total_cgst || 0)).toFixed(2)}</span>
-                          </div>
                           {bill.service_tax_amount > 0 && (
                             <div className="flex justify-between">
                               <span>Service Charge (5%):</span>
@@ -541,7 +565,7 @@ export default function PrintBill() {
                         <div className="flex justify-between font-bold text-sm">
                           <span>Total:</span>
                           <span style={{ color: 'black' }}>
-                            ₹{parseFloat(bill.total_amount).toFixed(2)}
+                            ₹{parseFloat(bill.subtotal).toFixed(2)}
                           </span>
                         </div>
                       </div>

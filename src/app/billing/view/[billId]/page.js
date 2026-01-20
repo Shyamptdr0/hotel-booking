@@ -401,6 +401,9 @@ export default function ViewBill() {
                       <div>
                         <h2 className="text-xl font-bold">BILL</h2>
                         <p className="text-sm text-black">Bill No: #{bill.bill_no}</p>
+                        {bill.table_name && (
+                          <p className="text-sm text-black">Table: {bill.table_name} ({bill.section})</p>
+                        )}
                       </div>
                       {currentSettings.showTimestamp && (
                         <div className="text-right">

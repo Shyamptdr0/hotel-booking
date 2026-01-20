@@ -3,8 +3,47 @@ import { NextResponse } from 'next/server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  {
+    db: {
+      schema: 'public'
+    },
+    auth: {
+      persistSession: false
+    },
+    global: {
+      headers: {
+        'Connection': 'keep-alive'
+      }
+    }
+  }
 )
+
+// Helper function for retry logic
+async function withRetry(operation, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      // Check if it's a connection timeout error
+      if (error.message?.includes('Connect Timeout Error') || 
+          error.message?.includes('UND_ERR_CONNECT_TIMEOUT') ||
+          error.message?.includes('fetch failed')) {
+        
+        if (attempt === maxRetries) {
+          throw new Error('Database connection failed after multiple attempts. Please check your internet connection.')
+        }
+        
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+        continue
+      }
+      
+      // For non-timeout errors, throw immediately
+      throw error
+    }
+  }
+}
 
 export async function GET(request) {
   try {
@@ -22,7 +61,9 @@ export async function GET(request) {
       query = query.eq('status', status)
     }
 
-    const { data, error } = await query
+    const { data, error } = await withRetry(async () => {
+      return await query
+    })
 
     if (error) throw error
 
@@ -44,19 +85,21 @@ export async function POST(request) {
       )
     }
 
-    const { data, error } = await supabase
-      .from('menu_items')
-      .insert({
-        name,
-        category,
-        price: parseFloat(price),
-        tax: 5, // Default 5% total tax
-        sgst: 2.5, // Default 2.5% SGST
-        cgst: 2.5, // Default 2.5% CGST
-        status: status || 'active'
-      })
-      .select()
-      .single()
+    const { data, error } = await withRetry(async () => {
+      return await supabase
+        .from('menu_items')
+        .insert({
+          name,
+          category,
+          price: parseFloat(price),
+          tax: 5, // Default 5% total tax
+          sgst: 2.5, // Default 2.5% SGST
+          cgst: 2.5, // Default 2.5% CGST
+          status: status || 'active'
+        })
+        .select()
+        .single()
+    })
 
     if (error) throw error
 
@@ -78,20 +121,22 @@ export async function PUT(request) {
       )
     }
 
-    const { data, error } = await supabase
-      .from('menu_items')
-      .update({
-        name,
-        category,
-        price: parseFloat(price),
-        tax: 5, // Default 5% total tax
-        sgst: 2.5, // Default 2.5% SGST
-        cgst: 2.5, // Default 2.5% CGST
-        status: status || 'active'
-      })
-      .eq('id', id)
-      .select()
-      .single()
+    const { data, error } = await withRetry(async () => {
+      return await supabase
+        .from('menu_items')
+        .update({
+          name,
+          category,
+          price: parseFloat(price),
+          tax: 5, // Default 5% total tax
+          sgst: 2.5, // Default 2.5% SGST
+          cgst: 2.5, // Default 2.5% CGST
+          status: status || 'active'
+        })
+        .eq('id', id)
+        .select()
+        .single()
+    })
 
     if (error) throw error
 
@@ -114,12 +159,14 @@ export async function DELETE(request) {
     }
 
     // Hard delete since foreign key constraint is removed from bill_items
-    const { data, error } = await supabase
-      .from('menu_items')
-      .delete()
-      .eq('id', id)
-      .select()
-      .single()
+    const { data, error } = await withRetry(async () => {
+      return await supabase
+        .from('menu_items')
+        .delete()
+        .eq('id', id)
+        .select()
+        .single()
+    })
 
     if (error) throw error
 

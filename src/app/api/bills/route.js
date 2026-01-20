@@ -3,14 +3,55 @@ import { NextResponse } from 'next/server'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  {
+    db: {
+      schema: 'public'
+    },
+    auth: {
+      persistSession: false
+    },
+    global: {
+      headers: {
+        'Connection': 'keep-alive'
+      }
+    }
+  }
 )
+
+// Helper function for retry logic
+async function withRetry(operation, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      // Check if it's a connection timeout error
+      if (error.message?.includes('Connect Timeout Error') || 
+          error.message?.includes('UND_ERR_CONNECT_TIMEOUT') ||
+          error.message?.includes('fetch failed')) {
+        
+        if (attempt === maxRetries) {
+          throw new Error('Database connection failed after multiple attempts. Please check your internet connection.')
+        }
+        
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+        continue
+      }
+      
+      // For non-timeout errors, throw immediately
+      throw error
+    }
+  }
+}
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
     const paymentType = searchParams.get('payment_type')
     const dateFilter = searchParams.get('date_filter')
+    const tableId = searchParams.get('table_id')
+    const status = searchParams.get('status')
 
     let query = supabase.from('bills').select('*').order('created_at', { ascending: false })
 
@@ -18,7 +59,17 @@ export async function GET(request) {
       query = query.eq('payment_type', paymentType)
     }
 
-    const { data, error } = await query
+    if (tableId) {
+      query = query.eq('table_id', tableId)
+    }
+
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    const { data, error } = await withRetry(async () => {
+      return await query
+    })
 
     if (error) throw error
 
@@ -57,7 +108,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { subtotal, tax_amount, total_amount, payment_type, items } = body
+    const { subtotal, tax_amount, total_amount, payment_type, items, table_id, table_name, section, status } = body
 
     if (!subtotal || !total_amount || !payment_type || !items || items.length === 0) {
       return NextResponse.json(
@@ -66,17 +117,23 @@ export async function POST(request) {
       )
     }
 
-    // Create bill (remove service_tax_amount as it doesn't exist in schema)
-    const { data: bill, error: billError } = await supabase
-      .from('bills')
-      .insert({
-        subtotal: parseFloat(subtotal),
-        tax_amount: parseFloat(tax_amount) || 0,
-        total_amount: parseFloat(total_amount),
-        payment_type
-      })
-      .select()
-      .single()
+    // Create bill with table information
+    const { data: bill, error: billError } = await withRetry(async () => {
+      return await supabase
+        .from('bills')
+        .insert({
+          subtotal: parseFloat(subtotal),
+          tax_amount: 0, // No tax
+          total_amount: parseFloat(subtotal), // Total equals subtotal
+          payment_type,
+          table_id: table_id || null,
+          table_name: table_name || null,
+          section: section || null,
+          status: status || 'running'
+        })
+        .select()
+        .single()
+    })
 
     if (billError) throw billError
 
@@ -91,10 +148,12 @@ export async function POST(request) {
       total: item.price * item.quantity
     }))
 
-    const { data: itemsData, error: itemsError } = await supabase
-      .from('bill_items')
-      .insert(billItems)
-      .select()
+    const { data: itemsData, error: itemsError } = await withRetry(async () => {
+      return await supabase
+        .from('bill_items')
+        .insert(billItems)
+        .select()
+    })
 
     if (itemsError) throw itemsError
 
@@ -110,7 +169,7 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const body = await request.json()
-    const { id, payment_type } = body
+    const { id, payment_type, status, subtotal, tax_amount, total_amount } = body
 
     if (!id) {
       return NextResponse.json(
@@ -119,17 +178,36 @@ export async function PUT(request) {
       )
     }
 
-    const { data, error } = await supabase
-      .from('bills')
-      .update({ payment_type })
-      .eq('id', id)
-      .select()
-      .single()
+    const updateData = {}
+    if (payment_type) updateData.payment_type = payment_type
+    if (status) updateData.status = status
+    if (subtotal !== undefined) updateData.subtotal = parseFloat(subtotal)
+    if (tax_amount !== undefined) updateData.tax_amount = parseFloat(tax_amount) || 0
+    if (total_amount !== undefined) updateData.total_amount = parseFloat(total_amount)
 
-    if (error) throw error
+    const { data, error } = await withRetry(async () => {
+      return await supabase
+        .from('bills')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single()
+    })
 
-    return NextResponse.json({ data, error: null })
+    if (error) {
+      console.error('Supabase error:', error)
+      throw error
+    }
+
+    return NextResponse.json({ 
+      data: data, 
+      error: null 
+    })
   } catch (error) {
-    return NextResponse.json({ data: null, error: error.message }, { status: 500 })
+    console.error('API error:', error)
+    return NextResponse.json({ 
+      data: null, 
+      error: error.message || 'Internal server error' 
+    }, { status: 500 })
   }
 }

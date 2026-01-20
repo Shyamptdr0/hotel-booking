@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,13 +11,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AuthGuard } from '@/components/auth-guard'
 import { Sidebar } from '@/components/sidebar'
 import { Navbar } from '@/components/navbar'
-import { ArrowLeft, Plus, Minus, Search, Trash2, Receipt } from 'lucide-react'
+import { ArrowLeft, Plus, Minus, Search, Trash2, Receipt, RotateCcw } from 'lucide-react'
 import Link from 'next/link'
 
 export default function CreateBill() {
+  const searchParams = useSearchParams()
+  const tableId = searchParams.get('tableId')
+  const tableName = searchParams.get('tableName')
+  const section = searchParams.get('section')
+  
   const [menuItems, setMenuItems] = useState([])
   const [filteredItems, setFilteredItems] = useState([])
   const [cart, setCart] = useState([])
+  const [existingBill, setExistingBill] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [categories, setCategories] = useState([])
@@ -28,11 +34,65 @@ export default function CreateBill() {
 
   useEffect(() => {
     fetchMenuItems()
-  }, [])
+    if (tableId) {
+      fetchExistingBill()
+    }
+  }, [tableId])
 
   useEffect(() => {
     filterItems()
   }, [menuItems, searchTerm, categoryFilter])
+
+  const fetchExistingBill = async () => {
+    try {
+      // First check for temporary items in localStorage
+      if (tableId) {
+        const tempKey = `temp_items_${tableId}`
+        const tempDataStr = localStorage.getItem(tempKey)
+        
+        if (tempDataStr) {
+          // Found temporary items - load them into cart
+          const tempData = JSON.parse(tempDataStr)
+          setCart(tempData.items.map(item => ({
+            id: item.item_id,
+            name: item.item_name,
+            category: item.item_category,
+            price: item.price,
+            quantity: item.quantity
+          })))
+          console.log('Loaded temporary items:', tempData.items.length)
+          return
+        }
+      }
+      
+      // Check for existing running bill in database
+      const response = await fetch(`/api/bills?table_id=${tableId}&status=running`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.data && data.data.length > 0) {
+          const bill = data.data[0]
+          setExistingBill(bill)
+          // Load existing bill items
+          const itemsResponse = await fetch(`/api/bills/${bill.id}/items`)
+          if (itemsResponse.ok) {
+            const itemsData = await itemsResponse.json()
+            if (itemsData.data) {
+              setCart(itemsData.data.map(item => ({
+                ...item,
+                id: item.item_id,
+                name: item.item_name,
+                category: item.item_category,
+                price: item.price,
+                quantity: item.quantity
+              })))
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching existing bill:', error)
+    }
+  }
 
   const fetchMenuItems = async () => {
     try {
@@ -145,55 +205,116 @@ export default function CreateBill() {
   }
 
   const calculateTotal = () => {
-    // Only include subtotal + GST (service tax removed from storage)
-    const total = calculateSubtotal() + calculateTax()
+    // Only include subtotal (no tax calculations)
+    const total = calculateSubtotal()
     return roundUpToNext(total) // Only round the total amount
   }
 
-  const generateBill = async () => {
+  const resetTable = async () => {
+    if (!confirm('Are you sure you want to reset this table? This will clear all items and reset table to blank status.')) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Clear temporary items from localStorage
+      if (tableId) {
+        const tempKey = `temp_items_${tableId}`
+        localStorage.removeItem(tempKey)
+      }
+      
+      if (existingBill) {
+        // Delete all bill items
+        await fetch(`/api/bills/${existingBill.id}/items`, {
+          method: 'DELETE'
+        })
+
+        // Update bill status to cancelled
+        await fetch(`/api/bills/${existingBill.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: 'cancelled'
+          }),
+        })
+      }
+
+      // Update table status to blank
+      await fetch(`/api/tables/${tableId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: tableName,
+          section: section,
+          status: 'blank'
+        }),
+      })
+
+      // Navigate back to tables
+      router.push('/tables')
+    } catch (error) {
+      console.error('Error resetting table:', error)
+      alert('Failed to reset table')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const saveItems = async () => {
     if (cart.length === 0) {
-      alert('Please add items to the bill')
+      alert('Please add items to save')
       return
     }
 
     setLoading(true)
 
     try {
-      const subtotal = calculateSubtotal()
-      const taxAmount = calculateTax()
-      const serviceTaxAmount = calculateServiceTax()
-      const totalAmount = calculateTotal()
-
-      const response = await fetch('/api/bills', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subtotal,
-          tax_amount: taxAmount,
-          total_amount: totalAmount,
-          payment_type: paymentType,
-          items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            category: item.category,
-            quantity: item.quantity,
-            price: item.price
-          }))
-        })
-      })
-
-      const result = await response.json()
-
-      if (result.error) {
-        throw new Error(result.error)
+      // Store items temporarily in localStorage with table info
+      const tempData = {
+        tableId,
+        tableName,
+        section,
+        items: cart.map(item => ({
+          item_id: item.id,
+          item_name: item.name,
+          item_category: item.category,
+          price: item.price,
+          quantity: item.quantity,
+          total: item.price * item.quantity
+        })),
+        timestamp: new Date().toISOString()
       }
-
-      // Redirect to print page
-      const billId = result.data.id
-      router.push(`/billing/print/${billId}`)
+      
+      // Use tableId as key for temporary storage
+      const storageKey = tableId ? `temp_items_${tableId}` : `temp_items_${Date.now()}`
+      localStorage.setItem(storageKey, JSON.stringify(tempData))
+      
+      // Update table status to running if we have a tableId
+      if (tableId) {
+        await fetch(`/api/tables/${tableId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: tableName,
+            section: section,
+            status: 'running'
+          }),
+        })
+      }
+      
+      console.log('Items saved temporarily:', storageKey, tempData)
+      
+      // Navigate back to tables
+      router.push('/tables')
     } catch (error) {
-      console.error('Error generating bill:', error)
-      alert('Error generating bill: ' + error.message)
+      console.error('Error saving items:', error)
+      alert('Error saving items: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -227,12 +348,31 @@ export default function CreateBill() {
           <Navbar />
           <main className="flex-1 p-4 lg:p-6 overflow-auto">
             <div className="mb-4 lg:mb-6">
-              <Link href="/dashboard" className="flex items-center text-gray-600 hover:text-gray-900 mb-2">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Link>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Create Bill</h1>
-              <p className="text-gray-600 text-sm lg:text-base">Add items and generate customer bill</p>
+              <div className="flex items-center justify-between mb-2">
+                <Link href="/tables" className="flex items-center text-gray-600 hover:text-gray-900">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Tables
+                </Link>
+                {tableId && (
+                  <Button 
+                    onClick={resetTable}
+                    disabled={loading}
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700 border-red-300 hover:border-red-400"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Reset Table
+                  </Button>
+                )}
+              </div>
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+                  {tableName ? `${tableName} - ${section}` : 'Create Bill'}
+                </h1>
+                <p className="text-gray-600 text-sm lg:text-base">
+                  {tableName ? 'Add items and update order' : 'Add items and generate customer bill'}
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
@@ -383,46 +523,19 @@ export default function CreateBill() {
                             <span>Subtotal:</span>
                             <span>₹{calculateSubtotal().toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span>SGST:</span>
-                            <span>₹{calculateSgst().toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>CGST:</span>
-                            <span>₹{calculateCgst().toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between font-medium">
-                            <span>Total Tax:</span>
-                            <span>₹{calculateTax().toFixed(2)}</span>
-                          </div>
                           <div className="flex justify-between font-bold text-lg">
                             <span>Total:</span>
                             <span>₹{calculateTotal().toFixed(2)}</span>
                           </div>
                         </div>
 
-                        {/* Payment Type */}
-                        <div className="space-y-2">
-                          <Label htmlFor="payment">Payment Type</Label>
-                          <Select value={paymentType} onValueChange={setPaymentType}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cash">Cash</SelectItem>
-                              <SelectItem value="upi">Online</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Generate Bill Button */}
+                        {/* Save Items Button */}
                         <Button
-                          onClick={generateBill}
+                          onClick={saveItems}
                           disabled={loading || cart.length === 0}
                           className="w-full"
                         >
-                          {loading ? 'Generating...' : 'Generate Bill'}
+                          {loading ? 'Saving...' : 'Save Items'}
                         </Button>
                       </div>
                     )}

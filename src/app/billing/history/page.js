@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AuthGuard } from '@/components/auth-guard'
 import { Sidebar } from '@/components/sidebar'
 import { Navbar } from '@/components/navbar'
-import { ArrowLeft, Search, Eye, Printer, Calendar, IndianRupee } from 'lucide-react'
+import { ArrowLeft, Search, Eye, Printer, Calendar, IndianRupee, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatPaymentType } from '@/lib/utils'
 
@@ -39,21 +39,17 @@ export default function BillHistory() {
     todayRevenue: 0
   })
 
-  useEffect(() => {
-    fetchBills()
-  }, [])
-
-  useEffect(() => {
-    filterBills()
-  }, [bills, searchTerm, paymentFilter, dateFilter])
-
-  const fetchBills = async () => {
+  const fetchBills = useCallback(async () => {
     try {
-      // Fetch bills using direct API call
+      // Fetch all bills to debug status values
       const response = await fetch('/api/bills')
       const result = await response.json()
       const allBills = result.data || []
       
+      // Log all bills to see their statuses
+      console.log('All bills:', allBills.map(bill => ({ id: bill.id, bill_no: bill.bill_no, status: bill.status })))
+      
+      // Temporarily show all bills to debug
       setBills(allBills || [])
       
       // Calculate stats from local bills
@@ -80,7 +76,29 @@ export default function BillHistory() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchBills()
+  }, [])
+
+  // Refresh bills when page gains focus (useful after printing)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchBills()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [fetchBills])
+
+  useEffect(() => {
+    filterBills()
+  }, [bills, searchTerm, paymentFilter, dateFilter])
 
   const filterBills = () => {
     let filtered = bills
@@ -127,6 +145,26 @@ export default function BillHistory() {
 
   const handlePrint = (billId) => {
     router.push(`/billing/print/${billId}`)
+  }
+
+  const handleDelete = async (billId, billNo) => {
+    if (confirm(`Are you sure you want to delete Bill #${billNo}? This action cannot be undone.`)) {
+      try {
+        const response = await fetch(`/api/bills/${billId}`, {
+          method: 'DELETE',
+        })
+        
+        if (response.ok) {
+          // Refresh the bills list
+          fetchBills()
+        } else {
+          alert('Failed to delete bill. Please try again.')
+        }
+      } catch (error) {
+        console.error('Error deleting bill:', error)
+        alert('Error deleting bill: ' + error.message)
+      }
+    }
   }
 
   if (loading) {
@@ -314,6 +352,14 @@ export default function BillHistory() {
                               >
                                 <Printer className="h-4 w-4 mr-1" />
                                 Print
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDelete(bill.id, bill.bill_no)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
                               </Button>
                             </div>
                           </TableCell>

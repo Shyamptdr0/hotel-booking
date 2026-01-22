@@ -20,11 +20,13 @@ import {
 } from 'lucide-react'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+	{ name: 'Tables', href: '/tables', icon: Table },
+
   { name: 'Add Menu Item', href: '/menu/add', icon: PlusCircle },
   { name: 'Menu List', href: '/menu/list', icon: Utensils },
-  { name: 'Tables', href: '/tables', icon: Table },
+
   { name: 'Create Parcel Bill', href: '/billing/parcel', icon: IndianRupee },
+	{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Bill History', href: '/billing/history', icon: History },
   
 ]

@@ -119,7 +119,7 @@ export default function PrintBill() {
         body: JSON.stringify({ status: 'printed' })
       })
       
-      // Update table status to printed if bill has table_id
+      // Update table status to paid if bill has table_id
       if (bill && bill.table_id) {
         await fetch(`/api/tables/${bill.table_id}`, {
           method: 'PUT',
@@ -127,7 +127,7 @@ export default function PrintBill() {
           body: JSON.stringify({
             name: bill.table_name,
             section: bill.section,
-            status: 'printed'
+            status: 'paid'
           })
         })
       }

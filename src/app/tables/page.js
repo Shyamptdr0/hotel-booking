@@ -98,8 +98,14 @@ export default function TablesPage() {
   }
 
   const handleTableClick = (table) => {
-    setSelectedTable(table)
-    setIsActionModalOpen(true)
+    if (table.status === 'blank') {
+      // Direct navigation to create bill for blank tables
+      router.push(`/billing/create?tableId=${table.id}&tableName=${table.name}&section=${table.section}`)
+    } else {
+      // Show action modal for non-blank tables
+      setSelectedTable(table)
+      setIsActionModalOpen(true)
+    }
   }
 
   const handleAddItems = (table) => {
@@ -193,6 +199,17 @@ export default function TablesPage() {
         }
         
         if (bill) {
+          // Update table status to paid (ready for settlement)
+          await fetch(`/api/tables/${selectedTable.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: selectedTable.name,
+              section: selectedTable.section,
+              status: 'paid'
+            })
+          })
+          
           // Navigate to print page
           router.push(`/billing/print/${bill.id}`)
         } else {
@@ -233,18 +250,18 @@ export default function TablesPage() {
 
   const handleSettleBill = async () => {
     if (selectedTable) {
-      // Find the printed bill for this table
+      // Find the paid bill for this table
       try {
-        const response = await fetch(`/api/bills?table_id=${selectedTable.id}&status=printed`)
+        const response = await fetch(`/api/bills?table_id=${selectedTable.id}&status=paid`)
         if (response.ok) {
           const bills = await response.json()
           if (bills.data && bills.data.length > 0) {
             const bill = bills.data[0]
-            // Update bill status to paid
+            // Update bill status to settled
             await fetch(`/api/bills/${bill.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ status: 'paid' })
+              body: JSON.stringify({ status: 'settled' })
             })
             
             // Clear temporary items from localStorage

@@ -115,110 +115,27 @@ export default function TablesPage() {
   }
 
   const handlePrintBill = async () => {
-    if (selectedTable) {
-      try {
-        // First check for temporary items in localStorage
-        const tempKey = `temp_items_${selectedTable.id}`
-        const tempDataStr = localStorage.getItem(tempKey)
+    if (!selectedTable) return
+    
+    try {
+      // Check if there are temporary items for this table
+      const response = await fetch(`/api/temporary-items?table_id=${selectedTable.id}`)
+      
+      if (response.ok) {
+        const data = await response.json()
         
-        let bill = null
-        let items = []
-        
-        if (tempDataStr) {
-          // Found temporary items - create new bill
-          const tempData = JSON.parse(tempDataStr)
-          items = tempData.items || []
-          
-          // Calculate totals from items
-          const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-          const taxAmount = subtotal * 0.05 // 5% GST
-          const totalAmount = Math.ceil(subtotal + taxAmount) // Round up to next integer
-          
-          // Create new bill with items
-          const response = await fetch('/api/bills', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              subtotal: subtotal,
-              tax_amount: taxAmount,
-              total_amount: totalAmount,
-              payment_type: 'cash',
-              table_id: selectedTable.id,
-              table_name: selectedTable.name,
-              section: selectedTable.section,
-              status: 'running', // Keep as running until print button is pressed
-              items: items.map(item => ({
-                id: item.item_id,
-                name: item.item_name,
-                category: item.item_category,
-                quantity: item.quantity,
-                price: item.price
-              }))
-            })
-          })
-          
-          if (response.ok) {
-            const result = await response.json()
-            bill = result.data
-            // Clear temporary storage
-            localStorage.removeItem(tempKey)
-          }
-        } else {
-          // No temporary items - look for existing running bill
-          const response = await fetch(`/api/bills?table_id=${selectedTable.id}&status=running`)
-          if (response.ok) {
-            const bills = await response.json()
-            if (bills.data && bills.data.length > 0) {
-              bill = bills.data[0]
-              
-              // Get bill items to calculate totals
-              const itemsResponse = await fetch(`/api/bills/${bill.id}/items`)
-              if (itemsResponse.ok) {
-                const itemsData = await itemsResponse.json()
-                items = itemsData.data || []
-                
-                // Calculate totals from items
-                const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-                const taxAmount = subtotal * 0.05 // 5% GST
-                const totalAmount = Math.ceil(subtotal + taxAmount) // Round up to next integer
-                
-                // Update bill with calculated totals but keep as running
-                await fetch(`/api/bills/${bill.id}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    subtotal: subtotal,
-                    tax_amount: taxAmount,
-                    total_amount: totalAmount,
-                    status: 'running' // Keep as running until print button is pressed
-                  })
-                })
-              }
-            }
-          }
-        }
-        
-        if (bill) {
-          // Update table status to paid (ready for settlement)
-          await fetch(`/api/tables/${selectedTable.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: selectedTable.name,
-              section: selectedTable.section,
-              status: 'paid'
-            })
-          })
-          
-          // Navigate to print page
-          router.push(`/billing/print/${bill.id}`)
+        if (data.data && data.data.length > 0) {
+          // Navigate to print-from-temporary page
+          router.push(`/billing/print-temporary/${selectedTable.id}?tableName=${encodeURIComponent(selectedTable.name)}&section=${encodeURIComponent(selectedTable.section)}`)
         } else {
           alert('No items found for this table')
         }
-      } catch (error) {
-        console.error('Error printing bill:', error)
-        alert('Error printing bill: ' + error.message)
+      } else {
+        alert('Error checking table items')
       }
+    } catch (error) {
+      console.error('Error printing bill:', error)
+      alert('Error printing bill: ' + error.message)
     }
   }
 
@@ -264,9 +181,10 @@ export default function TablesPage() {
               body: JSON.stringify({ status: 'settled' })
             })
             
-            // Clear temporary items from localStorage
-            const tempKey = `temp_items_${selectedTable.id}`
-            localStorage.removeItem(tempKey)
+            // Clear temporary items from database
+            await fetch(`/api/temporary-items?table_id=${selectedTable.id}`, {
+              method: 'DELETE'
+            })
             
             // Update table status to blank (available for new customers)
             await fetch(`/api/tables/${selectedTable.id}`, {

@@ -1,0 +1,608 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { AuthGuard } from '@/components/auth-guard'
+import { Sidebar } from '@/components/sidebar'
+import { Navbar } from '@/components/navbar'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ArrowLeft, Printer, Home, Settings, Save } from 'lucide-react'
+import Link from 'next/link'
+import { formatPaymentType } from '@/lib/utils'
+
+export default function PrintFromTemporary() {
+  const [temporaryItems, setTemporaryItems] = useState([])
+  const [bill, setBill] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [printSettings, setPrintSettings] = useState({})
+  const [showCustomize, setShowCustomize] = useState(false)
+  const [tempSettings, setTempSettings] = useState({})
+  const params = useParams()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const tableId = params.tableId
+  const tableName = searchParams.get('tableName')
+  const section = searchParams.get('section')
+
+  useEffect(() => {
+    fetchTemporaryItems()
+    loadPrintSettings()
+  }, [tableId])
+
+  const loadPrintSettings = () => {
+    const savedSettings = localStorage.getItem('billPrintSettings')
+    if (savedSettings) {
+      setPrintSettings(JSON.parse(savedSettings))
+    } else {
+      // Default settings
+      setPrintSettings({
+        restaurantName: 'Param Mitra Family Restaurant',
+        restaurantTagline: 'Delicious Food, Great Service',
+        address: 'Barwaha Maheshwar road, Dhargaon',
+        phone: '8085902662',
+        gstNumber: '23EQDPP8494L1Z3',
+        fontSize: 'medium',
+        paperSize: '80mm',
+        showLogo: true,
+        showTax: true,
+        showTimestamp: true,
+        headerAlignment: 'center',
+        itemAlignment: 'left',
+        primaryColor: '#ea580c',
+        textColor: '#111827',
+        showPaymentMethod: true,
+        showWatermark: true,
+        watermarkText: 'Thank you for visiting!',
+        autoPrint: false
+      })
+    }
+  }
+
+  const fetchTemporaryItems = async () => {
+    try {
+      const response = await fetch(`/api/temporary-items?table_id=${tableId}`)
+      const data = await response.json()
+      
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      if (data.data && data.data.length > 0) {
+        setTemporaryItems(data.data)
+      } else {
+        throw new Error('No temporary items found for this table')
+      }
+    } catch (error) {
+      console.error('Error fetching temporary items:', error)
+      alert('Error loading temporary items: ' + error.message)
+      router.push('/tables')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createFinalBill = async () => {
+    if (temporaryItems.length === 0) {
+      alert('No items to create bill')
+      return
+    }
+
+    try {
+      // Calculate totals
+      const subtotal = temporaryItems.reduce((sum, item) => sum + item.total, 0)
+      
+      // Create final bill
+      const billResponse = await fetch('/api/bills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subtotal: subtotal,
+          tax_amount: 0,
+          total_amount: subtotal,
+          payment_type: 'cash',
+          items: temporaryItems.map(item => ({
+            id: item.item_id,
+            name: item.item_name,
+            category: item.item_category,
+            price: item.price,
+            quantity: item.quantity
+          })),
+          table_id: tableId,
+          table_name: tableName,
+          section: section,
+          status: 'printed'
+        })
+      })
+
+      const billResult = await billResponse.json()
+      
+      if (billResult.error) {
+        throw new Error(billResult.error)
+      }
+
+      setBill(billResult.data)
+
+      // Update table status to paid
+      await fetch(`/api/tables/${tableId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: tableName,
+          section: section,
+          status: 'paid'
+        })
+      })
+
+      // Clear temporary items
+      await fetch(`/api/temporary-items?table_id=${tableId}`, {
+        method: 'DELETE'
+      })
+
+      return billResult.data
+    } catch (error) {
+      console.error('Error creating final bill:', error)
+      alert('Error creating bill: ' + error.message)
+      return null
+    }
+  }
+
+  const handlePrint = async () => {
+    if (!bill) {
+      const createdBill = await createFinalBill()
+      if (!createdBill) return
+    }
+
+    // Open print dialog and redirect immediately
+    window.print()
+    
+    // Redirect to tables page after printing
+    setTimeout(() => {
+      router.push('/tables')
+    }, 1500)
+  }
+
+  const handleNewBill = () => {
+    router.push('/billing/create')
+  }
+
+  const handleCustomize = () => {
+    setTempSettings({ 
+      ...printSettings,
+      paperSize: printSettings.paperSize || '80mm'
+    })
+    setShowCustomize(true)
+  }
+
+  const handleSaveSettings = () => {
+    setPrintSettings(tempSettings)
+    localStorage.setItem('billPrintSettings', JSON.stringify(tempSettings))
+    setShowCustomize(false)
+  }
+
+  const handleCancelCustomize = () => {
+    setTempSettings({})
+    setShowCustomize(false)
+  }
+
+  const updateTempSetting = (key, value) => {
+    setTempSettings(prev => ({ ...prev, [key]: value }))
+  }
+
+  if (loading) {
+    return (
+      <AuthGuard>
+        <div className="flex h-screen">
+          <Sidebar />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-col items-center space-y-4">
+              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            </div>
+          </div>
+        </div>
+      </AuthGuard>
+    )
+  }
+
+  if (temporaryItems.length === 0) {
+    return (
+      <AuthGuard>
+        <div className="flex h-screen">
+          <Sidebar />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-gray-500">No items found for this table</p>
+              <Link href="/tables">
+                <Button className="mt-4">Back to Tables</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </AuthGuard>
+    )
+  }
+
+  // Use tempSettings if customize panel is open, otherwise use saved printSettings
+  const currentSettings = showCustomize ? tempSettings : printSettings
+  const displayBill = bill || {
+    bill_no: 'TEMP',
+    created_at: new Date().toISOString(),
+    table_name: tableName,
+    section: section,
+    payment_type: 'cash',
+    subtotal: temporaryItems.reduce((sum, item) => sum + item.total, 0),
+    service_tax_amount: 0,
+    items: temporaryItems
+  }
+
+  const getFontSizeClass = () => {
+    switch (currentSettings.paperSize) {
+      case '57mm': return 'text-sm'
+      case '80mm': return 'text-base'
+      case 'A4': return 'text-lg'
+      case 'Letter': return 'text-lg'
+      default: return 'text-base'
+    }
+  }
+
+  const getAlignmentClass = (alignment) => {
+    switch (alignment) {
+      case 'left': return 'text-left'
+      case 'right': return 'text-right'
+      default: return 'text-center'
+    }
+  }
+
+  const getPaperSizeClass = () => {
+    const paperSize = currentSettings.paperSize || '80mm'
+    
+    switch (paperSize) {
+      case '57mm': return 'max-w-[200px]'
+      case '80mm': return 'max-w-[300px]'
+      case 'A4': return 'max-w-4xl'
+      case 'Letter': return 'max-w-4xl'
+      default: return 'max-w-[300px]'
+    }
+  }
+
+  const getPaperSizePadding = () => {
+    switch (currentSettings.paperSize) {
+      case '57mm': return 'p-4'
+      case '80mm': return 'p-6'
+      case 'A4': return 'p-8'
+      case 'Letter': return 'p-8'
+      default: return 'p-6'
+    }
+  }
+
+  return (
+    <AuthGuard>
+      <div className="flex h-screen bg-gray-100">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Navbar />
+          <main className="flex-1 p-6 overflow-auto">
+            {/* Control Buttons - Hidden when printing */}
+            <div className="no-print mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <Link href="/tables" className="flex items-center text-black hover:text-gray-900">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Tables
+                </Link>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button onClick={handleCustomize} variant="outline" className="flex items-center justify-center">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Customize
+                  </Button>
+                  <Button onClick={handlePrint} className="flex items-center justify-center">
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print Bill
+                  </Button>
+                  <Button onClick={handleNewBill} variant="outline" className="flex items-center justify-center">
+                    <Home className="h-4 w-4 mr-2" />
+                    New Bill
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Customize Panel - Hidden when printing */}
+            {showCustomize && (
+              <div className="no-print mb-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      Customize Print Settings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {/* Restaurant Information */}
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-lg">Restaurant Information</h3>
+                        <div>
+                          <Label htmlFor="restaurantName">Restaurant Name</Label>
+                          <Input
+                            id="restaurantName"
+                            value={tempSettings.restaurantName || ''}
+                            onChange={(e) => updateTempSetting('restaurantName', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="address">Address</Label>
+                          <Input
+                            id="address"
+                            value={tempSettings.address || ''}
+                            onChange={(e) => updateTempSetting('address', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="phone">Phone</Label>
+                          <Input
+                            id="phone"
+                            value={tempSettings.phone || ''}
+                            onChange={(e) => updateTempSetting('phone', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="gstNumber">GST Number</Label>
+                          <Input
+                            id="gstNumber"
+                            value={tempSettings.gstNumber || ''}
+                            onChange={(e) => updateTempSetting('gstNumber', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Print Settings */}
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-lg">Print Settings</h3>
+                        <div>
+                          <Label htmlFor="paperSize">Paper Size</Label>
+                          <Select value={tempSettings.paperSize || '80mm'} onValueChange={(value) => updateTempSetting('paperSize', value)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select paper size" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="57mm">57mm - Thermal Receipt</SelectItem>
+                              <SelectItem value="80mm">80mm - Thermal Receipt</SelectItem>
+                              <SelectItem value="A4">A4 - Professional Invoice</SelectItem>
+                              <SelectItem value="Letter">Letter - Professional Invoice</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="fontSize">Font Size</Label>
+                          <Select value={tempSettings.fontSize || 'medium'} onValueChange={(value) => updateTempSetting('fontSize', value)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select font size" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="small">Small</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="large">Large</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="headerAlignment">Header Alignment</Label>
+                          <Select value={tempSettings.headerAlignment || 'center'} onValueChange={(value) => updateTempSetting('headerAlignment', value)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select alignment" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="left">Left</SelectItem>
+                              <SelectItem value="center">Center</SelectItem>
+                              <SelectItem value="right">Right</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="itemAlignment">Item Alignment</Label>
+                          <Select value={tempSettings.itemAlignment || 'left'} onValueChange={(value) => updateTempSetting('itemAlignment', value)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select alignment" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="left">Left</SelectItem>
+                              <SelectItem value="center">Center</SelectItem>
+                              <SelectItem value="right">Right</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Display Options */}
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-lg">Display Options</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="showLogo"
+                              checked={tempSettings.showLogo || false}
+                              onChange={(e) => updateTempSetting('showLogo', e.target.checked)}
+                            />
+                            <Label htmlFor="showLogo">Show Logo</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="showTax"
+                              checked={tempSettings.showTax || false}
+                              onChange={(e) => updateTempSetting('showTax', e.target.checked)}
+                            />
+                            <Label htmlFor="showTax">Show Tax</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="showTimestamp"
+                              checked={tempSettings.showTimestamp || false}
+                              onChange={(e) => updateTempSetting('showTimestamp', e.target.checked)}
+                            />
+                            <Label htmlFor="showTimestamp">Show Timestamp</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="showPaymentMethod"
+                              checked={tempSettings.showPaymentMethod || false}
+                              onChange={(e) => updateTempSetting('showPaymentMethod', e.target.checked)}
+                            />
+                            <Label htmlFor="showPaymentMethod">Show Payment Method</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="showWatermark"
+                              checked={tempSettings.showWatermark || false}
+                              onChange={(e) => updateTempSetting('showWatermark', e.target.checked)}
+                            />
+                            <Label htmlFor="showWatermark">Show Watermark</Label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 mt-6 pt-6 border-t">
+                      <Button onClick={handleSaveSettings} className="flex items-center">
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Settings
+                      </Button>
+                      <Button onClick={handleCancelCustomize} variant="outline">
+                        Cancel
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Printable Bill Content */}
+            <div className={`${getPaperSizeClass()} mx-auto px-2 sm:px-0 print-only-content`}>
+              <Card className="print-break">
+                <CardContent className={`${getPaperSizePadding()} ${getFontSizeClass()} print-break`} style={{ color: currentSettings.textColor }}>
+                  {/* Restaurant Header */}
+                  <div className={`mb-4 ${getAlignmentClass(currentSettings.headerAlignment)}`}>
+                    {currentSettings.showLogo && (
+                      <div className="flex justify-center mb-2">
+                        <div className="flex items-center space-x-2">
+                          <div>
+                            <h1 className="text-sm font-bold">{currentSettings.restaurantName}</h1>
+                            <p className="text-xs text-black">{currentSettings.restaurantTagline || 'Delicious Food, Great Service'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="text-xs text-black">
+                      <p>{currentSettings.address}</p>
+                      <p>{currentSettings.phone}</p>
+                      <p>GSTIN: {currentSettings.gstNumber}</p>
+                    </div>
+                  </div>
+
+                  {/* Bill Details */}
+                  <div className="border-t border-b py-2 mb-3">
+                    <div className="flex justify-between items-center mb-1">
+                      <div>
+                        <h2 className="text-sm font-bold">BILL</h2>
+                        <p className="text-xs text-black">Bill No: #{displayBill.bill_no}</p>
+                        {displayBill.table_name && (
+                          <p className="text-xs text-black">Table: {displayBill.table_name} ({displayBill.section})</p>
+                        )}
+                      </div>
+                      {currentSettings.showTimestamp && (
+                        <div className="text-right">
+                          <p className="text-xs text-black">Date: {new Date(displayBill.created_at).toLocaleDateString()}</p>
+                          <p className="text-xs text-black">Time: {new Date(displayBill.created_at).toLocaleTimeString()}</p>
+                        </div>
+                      )}
+                    </div>
+                    {currentSettings.showPaymentMethod && (
+                      <div className="mt-1">
+                        <p className="text-xs text-black">Payment: {formatPaymentType(displayBill.payment_type)}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bill Items */}
+                  <div className="mb-3">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left pb-1">Item</th>
+                          <th className="text-right px-1 pb-1">Qty</th>
+                          <th className="text-right px-1 pb-1">Rate</th>
+                          <th className="text-right px-1 pb-1">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayBill.items.map((item, index) => {
+                          const itemTotal = (item.price * item.quantity)
+                          
+                          return (
+                            <tr key={index} className="border-b border-gray-100 print-no-break">
+                              <td className="py-1">{item.item_name || `Item ${index + 1}`}</td>
+                              <td className="text-right px-1">{item.quantity}</td>
+                              <td className="text-right px-1">₹{item.price.toFixed(2)}</td>
+                              <td className="text-right px-1">₹{itemTotal.toFixed(2)}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Totals */}
+                  <div className="border-t pt-2">
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between border-b pb-1 mb-1">
+                        <span>Total Items:</span>
+                        <span>{displayBill.items.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>₹{parseFloat(displayBill.subtotal).toFixed(2)}</span>
+                      </div>
+                      {currentSettings.showTax && (
+                        <>
+                          {displayBill.service_tax_amount > 0 && (
+                            <div className="flex justify-between">
+                              <span>Service Charge (5%):</span>
+                              <span>₹{parseFloat(displayBill.service_tax_amount).toFixed(2)}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      <div className="border-t pt-1 mt-1">
+                        <div className="flex justify-between font-bold text-sm">
+                          <span>Total:</span>
+                          <span style={{ color: 'black' }}>
+                            ₹{parseFloat(displayBill.subtotal).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {currentSettings.showWatermark && (
+                    <div className="text-center mt-2 text-black text-xs">
+                      {currentSettings.watermarkText}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </main>
+        </div>
+      </div>
+    </AuthGuard>
+  )
+}

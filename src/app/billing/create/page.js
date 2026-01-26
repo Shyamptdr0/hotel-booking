@@ -12,8 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AuthGuard } from '@/components/auth-guard'
 import { Sidebar } from '@/components/sidebar'
 import { Navbar } from '@/components/navbar'
-import { ArrowLeft, Plus, Minus, Search, Trash2, Receipt, RotateCcw, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Plus, Minus, Search, Trash2, Receipt, RotateCcw } from 'lucide-react'
 import Link from 'next/link'
+import { useRealtimeItemsSync } from '@/hooks/useWebSocket'
 
 function CreateBillContent() {
   const searchParams = useSearchParams()
@@ -37,7 +38,7 @@ function CreateBillContent() {
   useEffect(() => {
     fetchMenuItems()
     if (tableId) {
-      fetchExistingBill()
+      fetchTemporaryItems()
     }
   }, [tableId])
 
@@ -45,54 +46,29 @@ function CreateBillContent() {
     filterItems()
   }, [menuItems, searchTerm, categoryFilter])
 
-  const fetchExistingBill = async () => {
+  // Real-time synchronization - fetch latest items from other devices
+  useRealtimeItemsSync(tableId, (updatedItems) => {
+    setCart(updatedItems)
+  })
+
+  const fetchTemporaryItems = async () => {
     try {
-      // First check for temporary items in localStorage
-      if (tableId) {
-        const tempKey = `temp_items_${tableId}`
-        const tempDataStr = localStorage.getItem(tempKey)
-        
-        if (tempDataStr) {
-          // Found temporary items - load them into cart
-          const tempData = JSON.parse(tempDataStr)
-          setCart(tempData.items.map(item => ({
+      const response = await fetch(`/api/temporary-items?table_id=${tableId}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.data && data.data.length > 0) {
+          // Load items from temporary storage
+          setCart(data.data.map(item => ({
             id: item.item_id,
             name: item.item_name,
             category: item.item_category,
             price: item.price,
             quantity: item.quantity
           })))
-          console.log('Loaded temporary items:', tempData.items.length)
-          return
-        }
-      }
-      
-      // Check for existing running bill in database
-      const response = await fetch(`/api/bills?table_id=${tableId}&status=running`)
-      if (response.ok) {
-        const data = await response.json()
-        if (data.data && data.data.length > 0) {
-          const bill = data.data[0]
-          setExistingBill(bill)
-          // Load existing bill items
-          const itemsResponse = await fetch(`/api/bills/${bill.id}/items`)
-          if (itemsResponse.ok) {
-            const itemsData = await itemsResponse.json()
-            if (itemsData.data) {
-              setCart(itemsData.data.map(item => ({
-                ...item,
-                id: item.item_id,
-                name: item.item_name,
-                category: item.item_category,
-                price: item.price,
-                quantity: item.quantity
-              })))
-            }
-          }
         }
       }
     } catch (error) {
-      console.error('Error fetching existing bill:', error)
+      console.error('Error fetching temporary items:', error)
     }
   }
 
@@ -138,13 +114,17 @@ function CreateBillContent() {
     const existingItem = cart.find(cartItem => cartItem.id === item.id)
     
     if (existingItem) {
-      setCart(cart.map(cartItem =>
+      const newCart = cart.map(cartItem =>
         cartItem.id === item.id
           ? { ...cartItem, quantity: cartItem.quantity + 1 }
           : cartItem
-      ))
+      )
+      setCart(newCart)
+      syncToDatabase(newCart)
     } else {
-      setCart([...cart, { ...item, quantity: 1 }])
+      const newCart = [...cart, { ...item, quantity: 1 }]
+      setCart(newCart)
+      syncToDatabase(newCart)
     }
   }
 
@@ -152,14 +132,45 @@ function CreateBillContent() {
     if (newQuantity <= 0) {
       removeFromCart(itemId)
     } else {
-      setCart(cart.map(item =>
+      const newCart = cart.map(item =>
         item.id === itemId ? { ...item, quantity: newQuantity } : item
-      ))
+      )
+      setCart(newCart)
+      syncToDatabase(newCart)
     }
   }
 
   const removeFromCart = (itemId) => {
-    setCart(cart.filter(item => item.id !== itemId))
+    const newCart = cart.filter(item => item.id !== itemId)
+    setCart(newCart)
+    syncToDatabase(newCart)
+  }
+
+  const syncToDatabase = async (cartItems) => {
+    if (!tableId) return
+    
+    try {
+      const response = await fetch('/api/temporary-items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          table_id: tableId,
+          items: cartItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            price: item.price,
+            quantity: item.quantity
+          }))
+        })
+      })
+      
+      if (!response.ok) {
+        console.error('Failed to sync items to database')
+      }
+    } catch (error) {
+      console.error('Error syncing items:', error)
+    }
   }
 
   // Helper function to round up to next integer
@@ -219,10 +230,11 @@ function CreateBillContent() {
   const confirmResetTable = async () => {
     setLoading(true)
     try {
-      // Clear temporary items from localStorage
+      // Clear temporary items from database
       if (tableId) {
-        const tempKey = `temp_items_${tableId}`
-        localStorage.removeItem(tempKey)
+        await fetch(`/api/temporary-items?table_id=${tableId}`, {
+          method: 'DELETE'
+        })
       }
       
       if (existingBill) {
@@ -276,25 +288,27 @@ function CreateBillContent() {
     setLoading(true)
 
     try {
-      // Store items temporarily in localStorage with table info
-      const tempData = {
-        tableId,
-        tableName,
-        section,
-        items: cart.map(item => ({
-          item_id: item.id,
-          item_name: item.name,
-          item_category: item.category,
-          price: item.price,
-          quantity: item.quantity,
-          total: item.price * item.quantity
-        })),
-        timestamp: new Date().toISOString()
-      }
+      // Save items to temporary storage in database
+      const response = await fetch('/api/temporary-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          table_id: tableId,
+          table_name: tableName,
+          section: section,
+          items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            price: item.price,
+            quantity: item.quantity
+          }))
+        })
+      })
       
-      // Use tableId as key for temporary storage
-      const storageKey = tableId ? `temp_items_${tableId}` : `temp_items_${Date.now()}`
-      localStorage.setItem(storageKey, JSON.stringify(tempData))
+      if (!response.ok) {
+        throw new Error('Failed to save items to database')
+      }
       
       // Update table status to running if we have a tableId
       if (tableId) {
@@ -311,7 +325,7 @@ function CreateBillContent() {
         })
       }
       
-      console.log('Items saved temporarily:', storageKey, tempData)
+      console.log('Items saved to temporary storage')
       
       // Navigate back to tables
       router.push('/tables')

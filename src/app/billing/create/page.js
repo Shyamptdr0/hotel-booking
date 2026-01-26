@@ -57,14 +57,28 @@ function CreateBillContent() {
       if (response.ok) {
         const data = await response.json()
         if (data.data && data.data.length > 0) {
-          // Load items from temporary storage
-          setCart(data.data.map(item => ({
-            id: item.item_id,
-            name: item.item_name,
-            category: item.item_category,
-            price: item.price,
-            quantity: item.quantity
-          })))
+          // Group items by item_id to handle potential duplicates
+          const groupedItems = {}
+          data.data.forEach(item => {
+            const itemId = item.item_id
+            if (groupedItems[itemId]) {
+              // If item already exists, add quantity
+              groupedItems[itemId].quantity += item.quantity
+            } else {
+              // Create new item entry with unique identifier
+              groupedItems[itemId] = {
+                cartId: `${itemId}_${Date.now()}_${Math.random()}`, // Unique identifier for cart
+                id: item.item_id,
+                name: item.item_name,
+                category: item.item_category,
+                price: item.price,
+                quantity: item.quantity
+              }
+            }
+          })
+          
+          // Convert grouped items back to array
+          setCart(Object.values(groupedItems))
         }
       }
     } catch (error) {
@@ -122,7 +136,11 @@ function CreateBillContent() {
       setCart(newCart)
       syncToDatabase(newCart)
     } else {
-      const newCart = [...cart, { ...item, quantity: 1 }]
+      const newCart = [...cart, { 
+        ...item, 
+        quantity: 1,
+        cartId: `${item.id}_${Date.now()}_${Math.random()}` // Unique identifier for cart
+      }]
       setCart(newCart)
       syncToDatabase(newCart)
     }
@@ -497,7 +515,7 @@ function CreateBillContent() {
                             </TableHeader>
                             <TableBody>
                               {cart.map((item) => (
-                                <TableRow key={item.id}>
+                                <TableRow key={item.cartId || item.id}>
                                   <TableCell className="font-medium">{item.name}</TableCell>
                                   <TableCell>
                                     <div className="flex items-center space-x-1">

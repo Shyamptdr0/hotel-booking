@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Printer, ArrowLeft, Building2, User, Calendar, Home, CreditCard, Receipt, Hash } from 'lucide-react'
+import { Printer, ArrowLeft, Building2, User, Calendar, Home, CreditCard, Receipt, Hash, Loader2 } from 'lucide-react'
 import { AuthGuard } from '@/components/auth-guard'
 import { Sidebar } from '@/components/sidebar'
 import { Navbar } from '@/components/navbar'
@@ -15,6 +15,7 @@ export default function CheckoutInvoicePage({ params }) {
     const router = useRouter()
     const [stay, setStay] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
         fetchStayDetails()
@@ -61,7 +62,9 @@ export default function CheckoutInvoicePage({ params }) {
 
     const roomChargeDetails = calculateRoomCharges()
     const foodCharges = stay?.bills?.reduce((sum, bill) => sum + parseFloat(bill.total_amount), 0) || 0
-    const totalPayable = roomChargeDetails.total + foodCharges
+    const totalBillAmount = roomChargeDetails.total + foodCharges
+    const advancePaid = stay?.paid_amount || 0
+    const remainingBalance = Math.max(0, totalBillAmount - advancePaid)
 
     // Flatten and aggregate food items from all bills
     const rawFoodItems = stay?.bills?.flatMap(bill =>
@@ -85,8 +88,50 @@ export default function CheckoutInvoicePage({ params }) {
         return acc
     }, {}))
 
-    const handlePrint = () => {
-        window.print()
+    const handlePrint = async () => {
+        if (!stay) return
+
+        if (stay.status === 'active') {
+            setIsSubmitting(true)
+            try {
+                // 1. Mark stay as completed
+                await fetch(`/api/guest-stays/${stay.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'completed',
+                        check_out_time: new Date().toISOString(),
+                        total_amount: totalBillAmount
+                    })
+                })
+
+                // 2. Mark room as cleaning
+                if (stay.room_id) {
+                    await fetch(`/api/rooms/${stay.room_id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'cleaning' })
+                    })
+                }
+
+                // Update local state and proceed to print
+                setStay(prev => ({ ...prev, status: 'completed' }))
+            } catch (error) {
+                console.error('Error finalizing checkout:', error)
+                alert('Error processing checkout. Please try again.')
+                setIsSubmitting(false)
+                return
+            } finally {
+                setIsSubmitting(false)
+            }
+        }
+
+        // Slight delay to ensure state updates or just for UX
+        setTimeout(() => {
+            window.print()
+            // Redirect after print dialog triggers/closes
+            router.push('/rooms')
+        }, 100)
     }
 
     if (loading) {
@@ -109,7 +154,7 @@ export default function CheckoutInvoicePage({ params }) {
     return (
         <AuthGuard>
             <div className="flex h-screen bg-slate-50 overflow-hidden">
-                <div className="no-print w-64 h-full border-r bg-white shrink-0">
+                <div className="no-print hidden lg:flex w-64 h-full border-r bg-white shrink-0 flex-col">
                     <Sidebar />
                 </div>
 
@@ -133,11 +178,13 @@ export default function CheckoutInvoicePage({ params }) {
                                 <Button
                                     className="bg-slate-900 hover:bg-black text-white font-medium rounded-lg px-6 h-10 transition-all"
                                     onClick={handlePrint}
+                                    disabled={isSubmitting}
                                 >
-                                    <Printer className="h-4 w-4 mr-2" />
-                                    Print Invoice
+                                    {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Printer className="h-4 w-4 mr-2" />}
+                                    {isSubmitting ? 'Finalizing...' : 'Print Invoice'}
                                 </Button>
                                 <Button
+                                    disabled={isSubmitting}
                                     variant="outline"
                                     className="border-slate-200 font-medium rounded-lg"
                                     onClick={() => router.push('/rooms')}
@@ -222,16 +269,24 @@ export default function CheckoutInvoicePage({ params }) {
                             {/* Totals */}
                             <div className="flex flex-col items-end text-[10px] border-b-2 border-dashed border-gray-400 pb-2 mb-2 space-y-1">
                                 <div className="flex justify-between w-full">
-                                    <span>Subtotal:</span>
-                                    <span className="font-bold">₹{totalPayable.toFixed(2)}</span>
+                                    <span>Total Bill:</span>
+                                    <span className="font-bold">₹{totalBillAmount.toFixed(2)}</span>
                                 </div>
+
+                                {advancePaid > 0 && (
+                                    <div className="flex justify-between w-full text-gray-600">
+                                        <span>Advance Paid:</span>
+                                        <span>- ₹{advancePaid.toFixed(2)}</span>
+                                    </div>
+                                )}
+
                                 <div className="flex justify-between w-full">
                                     <span>GST:</span>
                                     <span>₹0.00</span>
                                 </div>
                                 <div className="flex justify-between w-full text-base font-bold text-black border-t border-dashed border-gray-400 pt-1 mt-1">
-                                    <span>Total:</span>
-                                    <span>₹{totalPayable.toFixed(2)}</span>
+                                    <span>Payable Amount:</span>
+                                    <span>₹{remainingBalance.toFixed(2)}</span>
                                 </div>
                             </div>
 

@@ -157,32 +157,7 @@ export default function RoomDetailsPage({ params }) {
 
     const confirmCheckOut = async () => {
         setIsCheckoutModalOpen(false)
-        setIsSubmitting(true)
-        try {
-            // 1. Mark stay as completed
-            await fetch(`/api/guest-stays/${stay.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    status: 'completed',
-                    check_out_time: new Date().toISOString(),
-                    total_amount: totalBill // Save the final calculated bill total
-                })
-            })
-
-            // 2. Mark room as cleaning
-            await fetch(`/api/rooms/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'cleaning' })
-            })
-
-            router.push(`/checkout/${stay.id}`)
-        } catch (error) {
-            console.error('Error during checkout:', error)
-        } finally {
-            setIsSubmitting(false)
-        }
+        router.push(`/checkout/${stay.id}`)
     }
 
     const handleClearRoom = () => {
@@ -522,7 +497,7 @@ export default function RoomDetailsPage({ params }) {
                                 <LogOut className="h-5 w-5 text-slate-900" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold">Confirm Checkout</h2>
+                                <DialogTitle className="text-xl font-bold">Confirm Checkout</DialogTitle>
                                 <p className="text-slate-400 text-xs mt-0.5">Final Settlement</p>
                             </div>
                         </div>
@@ -532,10 +507,20 @@ export default function RoomDetailsPage({ params }) {
                             <p className="text-sm text-slate-600 leading-relaxed">
                                 Are you sure you want to check out <span className="text-slate-900 font-semibold">{stay?.guest_name}</span>? This will finalize the bill and mark the room as ready for cleaning.
                             </p>
-                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-semibold text-slate-500 uppercase">Total Payable</span>
-                                    <span className="text-lg font-bold text-slate-900">₹{totalBill.toFixed(2)}</span>
+                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-slate-500">Total Bill</span>
+                                    <span className="font-semibold text-slate-900">₹{totalBill.toFixed(2)}</span>
+                                </div>
+                                {(stay?.paid_amount || 0) > 0 && (
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-emerald-600">Advance Paid</span>
+                                        <span className="font-semibold text-emerald-700">- ₹{stay.paid_amount.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                <div className="pt-2 mt-2 border-t border-slate-200 flex justify-between items-center">
+                                    <span className="text-xs font-bold text-slate-500 uppercase">Remaining Payable</span>
+                                    <span className="text-lg font-bold text-slate-900">₹{Math.max(0, totalBill - (stay?.paid_amount || 0)).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
@@ -568,7 +553,7 @@ export default function RoomDetailsPage({ params }) {
                                 <Trash2 className="h-5 w-5 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold">Clear Room</h2>
+                                <DialogTitle className="text-xl font-bold">Clear Room</DialogTitle>
                                 <p className="text-rose-100 text-xs mt-0.5">Cancel Stay & Make Available</p>
                             </div>
                         </div>

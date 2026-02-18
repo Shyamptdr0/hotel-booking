@@ -21,7 +21,10 @@ function CreateBillContent() {
   const tableId = searchParams.get('tableId')
   const tableName = searchParams.get('tableName')
   const section = searchParams.get('section')
-  
+  const stayId = searchParams.get('stayId')
+  const roomNumber = searchParams.get('roomNumber')
+  const roomId = searchParams.get('roomId')
+
   const [menuItems, setMenuItems] = useState([])
   const [filteredItems, setFilteredItems] = useState([])
   const [cart, setCart] = useState([])
@@ -39,8 +42,11 @@ function CreateBillContent() {
     fetchMenuItems()
     if (tableId) {
       fetchTemporaryItems()
+    } else if (stayId) {
+      // For room service, we could fetch existing running bills for this stay
+      // but usually we just start with a fresh order or add to history
     }
-  }, [tableId])
+  }, [tableId, stayId])
 
   useEffect(() => {
     filterItems()
@@ -79,7 +85,7 @@ function CreateBillContent() {
               }
             }
           })
-          
+
           // Convert grouped items back to array
           setCart(Object.values(groupedItems))
         }
@@ -94,11 +100,11 @@ function CreateBillContent() {
       const response = await fetch('/api/menu-items')
       const result = await response.json()
       const allMenuItems = result.data || []
-      
+
       // Filter out inactive items - only show active items in create bill
       const activeMenuItems = allMenuItems.filter(item => item.status !== 'inactive')
       setMenuItems(activeMenuItems)
-      
+
       // Extract unique categories from active items
       const uniqueCategories = [...new Set(activeMenuItems?.map(item => item.category) || [])]
       setCategories(uniqueCategories)
@@ -129,7 +135,7 @@ function CreateBillContent() {
 
   const addToCart = (item) => {
     const existingItem = cart.find(cartItem => cartItem.id === item.id)
-    
+
     if (existingItem) {
       // Update existing item quantity, keep the same cartId
       const newCart = cart.map(cartItem =>
@@ -141,8 +147,8 @@ function CreateBillContent() {
       syncToDatabase(newCart)
     } else {
       // Add new item with unique cartId
-      const newCart = [...cart, { 
-        ...item, 
+      const newCart = [...cart, {
+        ...item,
         quantity: 1,
         cartId: `${item.id}_${Date.now()}_${Math.random()}` // Unique identifier for cart
       }]
@@ -171,7 +177,7 @@ function CreateBillContent() {
 
   const syncToDatabase = async (cartItems) => {
     if (!tableId) return
-    
+
     try {
       const response = await fetch('/api/temporary-items', {
         method: 'PUT',
@@ -187,7 +193,7 @@ function CreateBillContent() {
           }))
         })
       })
-      
+
       if (!response.ok) {
         console.error('Failed to sync items to database')
       }
@@ -259,7 +265,7 @@ function CreateBillContent() {
           method: 'DELETE'
         })
       }
-      
+
       if (existingBill) {
         // Delete all bill items
         await fetch(`/api/bills/${existingBill.id}/items`, {
@@ -311,7 +317,39 @@ function CreateBillContent() {
     setLoading(true)
 
     try {
-      // Save items to temporary storage in database
+      if (stayId) {
+        // Handle Room Service Order
+        const subtotal = calculateSubtotal()
+        const response = await fetch('/api/bills', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stay_id: stayId,
+            subtotal,
+            total_amount: subtotal, // Room service bills often go directly to stay totals
+            payment_type: 'room_service',
+            status: 'running',
+            items: cart.map(item => ({
+              id: item.id,
+              name: item.name,
+              category: item.category,
+              price: item.price,
+              quantity: item.quantity
+            }))
+          })
+        })
+
+        if (!response.ok) throw new Error('Failed to save room service order')
+
+        if (roomId) {
+          router.push(`/rooms/${roomId}`)
+        } else {
+          router.push('/rooms')
+        }
+        return
+      }
+
+      // Save items to temporary storage in database for restaurant tables
       const response = await fetch('/api/temporary-items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -328,11 +366,11 @@ function CreateBillContent() {
           }))
         })
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to save items to database')
       }
-      
+
       // Update table status to running if we have a tableId
       if (tableId) {
         await fetch(`/api/tables/${tableId}`, {
@@ -347,9 +385,9 @@ function CreateBillContent() {
           }),
         })
       }
-      
+
       console.log('Items saved to temporary storage')
-      
+
       // Navigate back to tables
       router.push('/tables')
     } catch (error) {
@@ -366,9 +404,11 @@ function CreateBillContent() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="h-16 w-16 bg-black rounded-2xl flex items-center justify-center shadow-lg mb-2">
+                <span className="text-2xl font-black text-orange-500 italic">MP</span>
+              </div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
             </div>
           </div>
         </div>
@@ -383,18 +423,21 @@ function CreateBillContent() {
         <div className="hidden lg:flex h-full w-64 flex-col bg-gray-50 border-r">
           <Sidebar />
         </div>
-        
+
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
           <main className="flex-1 p-4 lg:p-6 overflow-auto">
             <div className="mb-4 lg:mb-6">
               <div className="flex items-center justify-between mb-2">
-                <Link href="/tables" className="flex items-center text-gray-600 hover:text-gray-900">
+                <Link
+                  href={roomId ? `/rooms/${roomId}` : stayId ? `/rooms` : "/tables"}
+                  className="flex items-center text-gray-600 hover:text-gray-900"
+                >
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Tables
+                  {roomId ? 'Back to Room' : stayId ? 'Back to Rooms' : 'Back to Tables'}
                 </Link>
                 {tableId && (
-                  <Button 
+                  <Button
                     onClick={resetTable}
                     disabled={loading}
                     variant="outline"
@@ -407,10 +450,10 @@ function CreateBillContent() {
               </div>
               <div>
                 <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-                  {tableName ? `${tableName} - ${section}` : 'Create Bill'}
+                  {stayId ? `Room ${roomNumber} - Food Order` : tableName ? `${tableName} - ${section}` : 'Create Bill'}
                 </h1>
                 <p className="text-gray-600 text-sm lg:text-base">
-                  {tableName ? 'Add items and update order' : 'Add items and generate customer bill'}
+                  {stayId ? 'Add food items to room bill' : tableName ? 'Add items and update order' : 'Add items and generate customer bill'}
                 </p>
               </div>
             </div>
@@ -596,17 +639,17 @@ function CreateBillContent() {
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-gray-700">Are you sure you want to reset this table?</p>
-              
+
               <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setIsResetConfirmOpen(false)}
                   className="flex-1"
                   disabled={loading}
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={confirmResetTable}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                   disabled={loading}

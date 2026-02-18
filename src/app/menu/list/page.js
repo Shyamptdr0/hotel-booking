@@ -34,7 +34,7 @@ export default function MenuList() {
       const response = await fetch('/api/menu-items')
       const result = await response.json()
       setMenuItems(result.data || [])
-      
+
       // Extract unique categories
       const uniqueCategories = [...new Set(result.data?.map(item => item.category) || [])]
       setCategories(uniqueCategories)
@@ -69,53 +69,53 @@ export default function MenuList() {
     setFilteredItems(filtered)
   }
 
- const handleDelete = async (id) => {
-  if (!confirm('Are you sure you want to deactivate this item? It will no longer be available for new bills but will remain in existing bills.')) return;
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to deactivate this item? It will no longer be available for new bills but will remain in existing bills.')) return;
 
-  try {
-    const response = await fetch(`/api/menu-items?id=${id}`, {
-      method: 'DELETE',
-    });
+    try {
+      const response = await fetch(`/api/menu-items?id=${id}`, {
+        method: 'DELETE',
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (result.error) {
-      throw new Error(result.error);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      await fetchMenuItems();
+    } catch (error) {
+      console.error('Error deactivating menu item:', error);
+      alert('Error deactivating menu item: ' + error.message);
     }
-
-    await fetchMenuItems();
-  } catch (error) {
-    console.error('Error deactivating menu item:', error);
-    alert('Error deactivating menu item: ' + error.message);
-  }
-};
+  };
 
   const toggleStatus = async (item) => {
-  try {
-    const newStatus = item.status === 'active' ? 'inactive' : 'active';
-    
-    const response = await fetch('/api/menu-items', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...item,
-        status: newStatus
-      }),
-    });
+    try {
+      const newStatus = item.status === 'active' ? 'inactive' : 'active';
 
-    const result = await response.json();
-    
-    if (result.error) {
-      throw new Error(result.error);
+      const response = await fetch('/api/menu-items', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...item,
+          status: newStatus
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      await fetchMenuItems();
+    } catch (error) {
+      console.error('Error toggling status:', error);
     }
-
-    await fetchMenuItems();
-  } catch (error) {
-    console.error('Error toggling status:', error);
-  }
-};
+  };
 
   if (loading) {
     return (
@@ -123,9 +123,11 @@ export default function MenuList() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="h-16 w-16 bg-black rounded-2xl flex items-center justify-center shadow-lg mb-2">
+                <span className="text-2xl font-black text-orange-500 italic">MP</span>
+              </div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
             </div>
           </div>
         </div>

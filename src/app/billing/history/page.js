@@ -17,14 +17,14 @@ import { formatPaymentType } from '@/lib/utils'
 
 
 const formatCurrency = (value) => {
-    if (value === null || value === undefined || isNaN(Number(value))) {
-      return '₹0.00'
-    }
-    return `₹${Number(value).toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
+  if (value === null || value === undefined || isNaN(Number(value))) {
+    return '₹0.00'
   }
+  return `₹${Number(value).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}
 
 export default function BillHistory() {
   const router = useRouter()
@@ -51,31 +51,32 @@ export default function BillHistory() {
       const response = await fetch('/api/bills')
       const result = await response.json()
       const allBills = result.data || []
-      
+
       // Log all bills to see their statuses
       console.log('All bills:', allBills.map(bill => ({ id: bill.id, bill_no: bill.bill_no, status: bill.status })))
-      
-      // Temporarily show all bills to debug
-      setBills(allBills || [])
-      
+
+      // Show only restaurant bills (exclude room service/room orders)
+      const restaurantBills = allBills.filter(bill => bill.payment_type !== 'room_service')
+      setBills(restaurantBills || [])
+
       // Calculate stats from local bills
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      
-      const todayBills = allBills?.filter(bill => {
+
+      const todayBills = restaurantBills?.filter(bill => {
         const billDate = new Date(bill.created_at)
         return billDate >= today
       }) || []
-      
+
       const todayRevenue = todayBills.reduce((sum, bill) => sum + (bill.subtotal || 0), 0)
-      const totalRevenue = allBills?.reduce((sum, bill) => sum + (bill.subtotal || 0), 0) || 0
-      
+      const totalRevenue = restaurantBills?.reduce((sum, bill) => sum + (bill.subtotal || 0), 0) || 0
+
       setStats({
-        totalBills: allBills?.length || 0,
+        totalBills: restaurantBills?.length || 0,
         totalRevenue: totalRevenue,
         todayRevenue: todayRevenue
       })
-      
+
     } catch (error) {
       console.error('Error fetching bills:', error)
       setBills([])
@@ -133,10 +134,10 @@ export default function BillHistory() {
     if (dateFilter !== 'all') {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      
+
       filtered = filtered.filter(bill => {
         const billDate = new Date(bill.created_at)
-        
+
         switch (dateFilter) {
           case 'today':
             return billDate >= today
@@ -184,7 +185,7 @@ export default function BillHistory() {
         const response = await fetch(`/api/bills/${billToDelete.id}`, {
           method: 'DELETE',
         })
-        
+
         if (response.ok) {
           // Refresh the bills list
           fetchBills()
@@ -207,9 +208,11 @@ export default function BillHistory() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="h-16 w-16 bg-black rounded-2xl flex items-center justify-center shadow-lg mb-2">
+                <span className="text-2xl font-black text-orange-500 italic">MP</span>
+              </div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
             </div>
           </div>
         </div>
@@ -217,8 +220,8 @@ export default function BillHistory() {
     )
   }
   if (!stats) {
-  return <div>Loading...</div>; // or any loading state
-}
+    return <div>Loading...</div>; // or any loading state
+  }
 
   return (
     <AuthGuard>
@@ -227,7 +230,7 @@ export default function BillHistory() {
         <div className="hidden lg:flex h-full w-64 flex-col bg-gray-50 border-r">
           <Sidebar />
         </div>
-        
+
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
           <main className="flex-1 p-4 lg:p-6 overflow-auto">
@@ -236,8 +239,8 @@ export default function BillHistory() {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Link>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Bill History</h1>
-              <p className="text-gray-600 text-sm lg:text-base">View and search previous bills</p>
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Restaurant Order History</h1>
+              <p className="text-slate-500 text-sm lg:text-base">View and manage all food and dining orders</p>
             </div>
 
             {/* Stats Cards */}
@@ -415,39 +418,39 @@ export default function BillHistory() {
                             </TableCell>
                             <TableCell className="whitespace-nowrap">
                               <span className="capitalize px-2 py-1 bg-gray-100 rounded text-sm">
-                              {formatPaymentType(bill.payment_type)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <div className="flex space-x-2">
-                              <Link href={`/billing/view/${bill.id}`}>
-                                <Button size="sm" variant="outline">
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
+                                {formatPaymentType(bill.payment_type)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <div className="flex space-x-2">
+                                <Link href={`/billing/view/${bill.id}`}>
+                                  <Button size="sm" variant="outline">
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View
+                                  </Button>
+                                </Link>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handlePrint(bill.id)}
+                                >
+                                  <Printer className="h-4 w-4 mr-1" />
+                                  Print
                                 </Button>
-                              </Link>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handlePrint(bill.id)}
-                              >
-                                <Printer className="h-4 w-4 mr-1" />
-                                Print
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDelete(bill.id, bill.bill_no)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDelete(bill.id, bill.bill_no)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Delete
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </CardContent>
@@ -467,16 +470,16 @@ export default function BillHistory() {
               <p className="text-gray-700">
                 Are you sure you want to delete Bill #{billToDelete?.no}? This action cannot be undone.
               </p>
-              
+
               <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setIsDeleteConfirmOpen(false)}
                   className="flex-1"
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={confirmDelete}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                 >

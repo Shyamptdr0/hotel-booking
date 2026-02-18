@@ -16,6 +16,8 @@ export function formatPaymentType(paymentType) {
       return 'Card'
     case 'other':
       return 'Other'
+    case 'room_service':
+      return 'Room Order'
     default:
       return paymentType || 'Cash'
   }

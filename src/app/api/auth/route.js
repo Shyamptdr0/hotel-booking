@@ -1,22 +1,5 @@
 import { NextResponse } from 'next/server'
-
-// Mock authentication for development
-const MOCK_USERS = {
-  [process.env.DEMO_EMAIL]: {
-    email: process.env.DEMO_EMAIL,
-    password: process.env.DEMO_PASSWORD,
-    name: process.env.DEMO_USER_NAME,
-    session: {
-      access_token: 'mock-access-token-demo',
-      refresh_token: 'mock-refresh-token-demo',
-      user: {
-        id: 'demo-user-id',
-        email: process.env.DEMO_EMAIL,
-        name: process.env.DEMO_USER_NAME
-      }
-    }
-  }
-}
+import { supabase } from '@/lib/supabase'
 
 export async function POST(request) {
   try {
@@ -24,24 +7,69 @@ export async function POST(request) {
     const { action, email, password } = body
 
     if (action === 'signin') {
-      // Check if it's the demo user
+      // Check for Demo User credentials bypass
       if (email === process.env.DEMO_EMAIL && password === process.env.DEMO_PASSWORD) {
-        return NextResponse.json({ 
-          data: MOCK_USERS[process.env.DEMO_EMAIL], 
-          error: null 
+        return NextResponse.json({
+          data: {
+            user: {
+              id: 'demo-user-123',
+              email: email,
+              role: 'authenticated'
+            },
+            session: {
+              access_token: 'mock-demo-token',
+              refresh_token: 'mock-refresh-token',
+              user: {
+                id: 'demo-user-123',
+                email: email,
+                role: 'authenticated'
+              }
+            }
+          },
+          error: null
         })
       }
-      
-      return NextResponse.json(
-        { data: null, error: 'Invalid login credentials' },
-        { status: 401 }
-      )
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        return NextResponse.json(
+          { data: null, error: error.message },
+          { status: 401 }
+        )
+      }
+
+      return NextResponse.json({
+        data: data,
+        error: null
+      })
     } else if (action === 'signup') {
-      return NextResponse.json(
-        { data: null, error: 'Signup not available in demo mode' },
-        { status: 400 }
-      )
+      // For now, signup via API is disabled or restricted if needed
+      // But let's implement basic signup using supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      })
+
+      if (error) {
+        return NextResponse.json(
+          { data: null, error: error.message },
+          { status: 400 }
+        )
+      }
+
+      return NextResponse.json({ data, error: null })
+
     } else if (action === 'signout') {
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
       return NextResponse.json({ data: { success: true }, error: null })
     } else {
       return NextResponse.json(
@@ -54,23 +82,3 @@ export async function POST(request) {
   }
 }
 
-export async function GET(request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const token = searchParams.get('token')
-
-    if (token === 'mock-access-token-demo') {
-      return NextResponse.json({ 
-        data: MOCK_USERS[process.env.DEMO_EMAIL].session.user, 
-        error: null 
-      })
-    }
-
-    return NextResponse.json(
-      { data: null, error: 'Invalid token' },
-      { status: 401 }
-    )
-  } catch (error) {
-    return NextResponse.json({ data: null, error: error.message }, { status: 500 })
-  }
-}

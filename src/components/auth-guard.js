@@ -11,7 +11,7 @@ export function AuthGuard({ children }) {
   useEffect(() => {
     const checkAuth = () => {
       const session = localStorage.getItem('supabase_session')
-      
+
       if (!session) {
         router.push('/login')
         return
@@ -37,9 +37,15 @@ export function AuthGuard({ children }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+        <div className="flex flex-col items-center space-y-6 text-center">
+          <div className="h-16 w-16 bg-black rounded-[1.5rem] flex items-center justify-center shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-tr from-orange-500/20 to-transparent"></div>
+            <span className="text-2xl font-black text-orange-500 italic relative z-10">MP</span>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-b-black"></div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] animate-pulse">Initializing System</p>
+          </div>
         </div>
       </div>
     )

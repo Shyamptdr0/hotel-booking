@@ -10,7 +10,7 @@ export async function GET(request) {
   try {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     // Get today's bills
     const { data: todayBills, error: todayError } = await supabase
       .from('bills')
@@ -23,7 +23,7 @@ export async function GET(request) {
     // Get weekly sales data
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
-    
+
     const { data: weeklyBills, error: weeklyError } = await supabase
       .from('bills')
       .select('*')
@@ -35,22 +35,22 @@ export async function GET(request) {
     // Calculate weekly sales by day
     const weeklySales = []
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    
+
     for (let i = 0; i < 7; i++) {
       const dayDate = new Date()
       dayDate.setDate(dayDate.getDate() - (6 - i))
       dayDate.setHours(0, 0, 0, 0)
-      
+
       const dayEnd = new Date(dayDate)
       dayEnd.setHours(23, 59, 59, 999)
-      
+
       const dayBills = weeklyBills.filter(bill => {
         const billDate = new Date(bill.created_at)
         return billDate >= dayDate && billDate <= dayEnd
       })
-      
+
       const daySales = dayBills.reduce((sum, bill) => sum + parseFloat(bill.subtotal || 0), 0)
-      
+
       weeklySales.push({
         day: days[dayDate.getDay()],
         sales: daySales
@@ -80,7 +80,7 @@ export async function GET(request) {
     // Get monthly revenue
     const monthAgo = new Date()
     monthAgo.setMonth(monthAgo.getMonth() - 1)
-    
+
     const { data: monthlyBills, error: monthlyError } = await supabase
       .from('bills')
       .select('subtotal')
@@ -106,19 +106,113 @@ export async function GET(request) {
       return percentages
     }, {})
 
+    // Get Room stats
+    const { data: rooms, error: roomsError } = await supabase
+      .from('rooms')
+      .select('*')
+
+    if (roomsError) throw roomsError
+
+    const totalRooms = rooms.length
+    const occupiedRooms = rooms.filter(r => r.status === 'occupied').length
+    const availableRooms = rooms.filter(r => r.status === 'available').length
+    const cleaningRooms = rooms.filter(r => r.status === 'cleaning').length
+    const maintenanceRooms = rooms.filter(r => r.status === 'maintenance').length
+
+    // Get today's bookings
+    const { data: todayBookings, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('*')
+      .gte('check_in_date', today.toISOString())
+
+    if (bookingsError) throw bookingsError
+
+    // Get active guest stays for hotel stats
+    const { data: activeStays, error: staysError } = await supabase
+      .from('guest_stays')
+      .select('*, rooms(id, price_per_night, room_types(id, base_price))')
+      .eq('status', 'active')
+
+    if (staysError) throw staysError
+
+    // Split bills into Restaurant (Table) and Room Service
+    const restaurantBills = todayBills.filter(bill => bill.table_id)
+    const roomBills = todayBills.filter(bill => !bill.table_id) // Assumes if not table, it's room/direct
+
+    const restaurantBillRevenue = restaurantBills.reduce((sum, bill) => sum + parseFloat(bill.subtotal || 0), 0)
+    const roomBillRevenue = roomBills.reduce((sum, bill) => sum + parseFloat(bill.subtotal || 0), 0)
+
+    // Get completed stays for today (checked out today) with their linked bills
+    const { data: completedStays, error: completedStaysError } = await supabase
+      .from('guest_stays')
+      .select('total_amount, check_out_time, bills(total_amount)')
+      .eq('status', 'completed')
+      .gte('check_out_time', today.toISOString())
+
+    if (completedStaysError) throw completedStaysError
+
+    // Calculate ONLY Rent revenue from completed stays
+    // Assumption: stay.total_amount includes Room Rent + Food Bills.
+    // We subtract the food bills to isolate the rent.
+    const completedStaysRentOnly = completedStays.reduce((sum, stay) => {
+      const totalStayAmount = parseFloat(stay.total_amount || 0)
+
+      // Sum up all bills linked to this stay (Food/Services)
+      const stayFoodBills = stay.bills?.reduce((bSum, bill) => bSum + parseFloat(bill.total_amount || 0), 0) || 0
+
+      const rentPortion = Math.max(0, totalStayAmount - stayFoodBills)
+      return sum + rentPortion
+    }, 0)
+
+    // Calculate Hotel Daily Revenue (Room Rent from active stays)
+    // For active stays, we calculate the daily run rate (1 night's price)
+    const hotelActiveDailyRevenue = activeStays.reduce((sum, stay) => {
+      const room = stay.rooms
+      if (!room) return sum
+
+      let rate = room.price_per_night
+
+      // If no override price, check room type base price (handle array or object)
+      if (!rate) {
+        const type = Array.isArray(room.room_types) ? room.room_types[0] : room.room_types
+        rate = type?.base_price
+      }
+
+      return sum + (parseFloat(rate) || 0)
+    }, 0)
+
+    // Total Rent Revenue = Revenue from completed stays (Rent only) + projected daily revenue from active stays
+    const hotelDailyRentRevenue = completedStaysRentOnly + hotelActiveDailyRevenue
+
+    const totalGuests = activeStays.reduce((sum, stay) => sum + (stay.persons || 1), 0)
+
     const dashboardData = {
-      todaySales,
-      todayBills: todayBillsCount,
-      weeklySales,
-      totalMenuItems: menuItems.length,
-      activeMenuItems: menuItems.filter(item => item.status === 'active').length,
+      totalRevenue: restaurantBillRevenue + roomBillRevenue + hotelDailyRentRevenue,
+      restaurant: {
+        todayRevenue: restaurantBillRevenue,
+        todayOrders: restaurantBills.length,
+        averageOrderValue: restaurantBills.length > 0 ? restaurantBillRevenue / restaurantBills.length : 0,
+        activeMenuItems: menuItems.filter(item => item.status === 'active').length,
+        totalMenuItems: menuItems.length,
+        recentBills: restaurantBills.slice(0, 5) // Only show restaurant bills in restaurant card
+      },
+      hotel: {
+        totalRooms,
+        occupiedRooms,
+        availableRooms,
+        cleaningRooms,
+        maintenanceRooms,
+        todayCheckIns: todayBookings.length,
+        activeStays: activeStays.length,
+        currentGuests: totalGuests,
+        todayRevenue: hotelDailyRentRevenue + roomBillRevenue, // Rent + Room Service
+        roomServiceRevenue: roomBillRevenue,
+        rentRevenue: hotelDailyRentRevenue,
+        occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0
+      },
       monthlyRevenue,
-      averageOrderValue,
-      paymentStats: paymentPercentages,
-      recentBills: recentBills.map(bill => ({
-        ...bill,
-        items_count: 0 // Will be populated when we join with bill_items
-      }))
+      weeklySales,
+      paymentStats: paymentPercentages // Added useful stats
     }
 
     return NextResponse.json({ data: dashboardData, error: null })

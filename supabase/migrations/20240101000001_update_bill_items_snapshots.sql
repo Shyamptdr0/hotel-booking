@@ -31,6 +31,10 @@ SET item_name = COALESCE(mi.name, 'Deleted Item'),
 FROM menu_items mi 
 WHERE bill_items.item_id = mi.id AND bill_items.item_name IS NULL;
 
+-- Update any remaining records that couldn't be linked to a menu item
+UPDATE bill_items SET item_name = 'Deleted Item' WHERE item_name IS NULL;
+UPDATE bill_items SET item_category = 'Others' WHERE item_category IS NULL;
+
 -- Now make item_name NOT NULL for future records
 ALTER TABLE bill_items ALTER COLUMN item_name SET NOT NULL;
 
@@ -42,9 +46,16 @@ CREATE INDEX idx_bill_items_item_id ON bill_items(item_id);
 ALTER TABLE bill_items ENABLE ROW LEVEL SECURITY;
 
 -- Recreate policies for bill_items
+DROP POLICY IF EXISTS "Users can view all bill items" ON bill_items;
 CREATE POLICY "Users can view all bill items" ON bill_items FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can insert bill items" ON bill_items;
 CREATE POLICY "Users can insert bill items" ON bill_items FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Users can update bill items" ON bill_items;
 CREATE POLICY "Users can update bill items" ON bill_items FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Users can delete bill items" ON bill_items;
 CREATE POLICY "Users can delete bill items" ON bill_items FOR DELETE USING (true);
 
 -- Drop the backup table

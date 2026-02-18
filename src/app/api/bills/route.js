@@ -26,19 +26,19 @@ async function withRetry(operation, maxRetries = 3) {
       return await operation()
     } catch (error) {
       // Check if it's a connection timeout error
-      if (error.message?.includes('Connect Timeout Error') || 
-          error.message?.includes('UND_ERR_CONNECT_TIMEOUT') ||
-          error.message?.includes('fetch failed')) {
-        
+      if (error.message?.includes('Connect Timeout Error') ||
+        error.message?.includes('UND_ERR_CONNECT_TIMEOUT') ||
+        error.message?.includes('fetch failed')) {
+
         if (attempt === maxRetries) {
           throw new Error('Database connection failed after multiple attempts. Please check your internet connection.')
         }
-        
+
         // Wait before retrying (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
         continue
       }
-      
+
       // For non-timeout errors, throw immediately
       throw error
     }
@@ -81,7 +81,7 @@ export async function GET(request) {
 
       filteredData = data.filter(bill => {
         const billDate = new Date(bill.created_at)
-        
+
         switch (dateFilter) {
           case 'today':
             return billDate >= today
@@ -108,7 +108,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { subtotal, tax_amount, total_amount, payment_type, items, table_id, table_name, section, status } = body
+    const { subtotal, tax_amount, total_amount, payment_type, items, table_id, table_name, section, status, room_id, booking_id } = body
 
     if (!subtotal || !total_amount || !payment_type || !items || items.length === 0) {
       return NextResponse.json(
@@ -117,7 +117,7 @@ export async function POST(request) {
       )
     }
 
-    // Create bill with table information
+    // Create bill with table or room information
     const { data: bill, error: billError } = await withRetry(async () => {
       return await supabase
         .from('bills')
@@ -129,6 +129,9 @@ export async function POST(request) {
           table_id: table_id || null,
           table_name: table_name || null,
           section: section || null,
+          room_id: room_id || null,
+          booking_id: booking_id || null,
+          stay_id: body.stay_id || null, // Add stay_id support
           status: status || 'running'
         })
         .select()
@@ -157,9 +160,9 @@ export async function POST(request) {
 
     if (itemsError) throw itemsError
 
-    return NextResponse.json({ 
-      data: { ...bill, items: itemsData }, 
-      error: null 
+    return NextResponse.json({
+      data: { ...bill, items: itemsData },
+      error: null
     })
   } catch (error) {
     return NextResponse.json({ data: null, error: error.message }, { status: 500 })
@@ -199,15 +202,15 @@ export async function PUT(request) {
       throw error
     }
 
-    return NextResponse.json({ 
-      data: data, 
-      error: null 
+    return NextResponse.json({
+      data: data,
+      error: null
     })
   } catch (error) {
     console.error('API error:', error)
-    return NextResponse.json({ 
-      data: null, 
-      error: error.message || 'Internal server error' 
+    return NextResponse.json({
+      data: null,
+      error: error.message || 'Internal server error'
     }, { status: 500 })
   }
 }

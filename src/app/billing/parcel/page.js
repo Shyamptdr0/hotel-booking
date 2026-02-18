@@ -20,7 +20,7 @@ function ParcelBillContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [categories, setCategories] = useState([])
-    const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [loadingItems, setLoadingItems] = useState(true)
   const router = useRouter()
 
@@ -37,11 +37,11 @@ function ParcelBillContent() {
       const response = await fetch('/api/menu-items')
       const result = await response.json()
       const allMenuItems = result.data || []
-      
+
       // Filter out inactive items - only show active items
       const activeMenuItems = allMenuItems.filter(item => item.status !== 'inactive')
       setMenuItems(activeMenuItems)
-      
+
       // Extract unique categories from active items
       const uniqueCategories = [...new Set(activeMenuItems?.map(item => item.category) || [])]
       setCategories(uniqueCategories)
@@ -72,7 +72,7 @@ function ParcelBillContent() {
 
   const addToCart = (item) => {
     const existingItem = cart.find(cartItem => cartItem.id === item.id)
-    
+
     if (existingItem) {
       setCart(cart.map(cartItem =>
         cartItem.id === item.id
@@ -119,7 +119,7 @@ function ParcelBillContent() {
       return
     }
 
-    
+
     setLoading(true)
 
     try {
@@ -170,9 +170,11 @@ function ParcelBillContent() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="h-16 w-16 bg-black rounded-2xl flex items-center justify-center shadow-lg mb-2">
+                <span className="text-2xl font-black text-orange-500 italic">MP</span>
+              </div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
             </div>
           </div>
         </div>
@@ -187,7 +189,7 @@ function ParcelBillContent() {
         <div className="hidden lg:flex h-full w-64 flex-col bg-gray-50 border-r">
           <Sidebar />
         </div>
-        
+
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
           <main className="flex-1 p-4 lg:p-6 overflow-auto">

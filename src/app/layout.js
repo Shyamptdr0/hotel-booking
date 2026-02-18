@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "ParamMitra Restaurant",
-  description: "Complete restaurant billing and management system",
+  title: "Moon Palace Hotel",
+  description: "Complete hotel & restaurant billing system",
 };
 
 export const viewport = {
@@ -29,15 +29,14 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/PM-logo.png" type="image/png" />
-        <link rel="shortcut icon" href="/PM-logo.png" />
         <meta name="theme-color" content="#ea580c" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body
-        className={`₹{geistSans.variable} ₹{geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden`}
+        suppressHydrationWarning
       >
         {children}
         <NetworkStatus />

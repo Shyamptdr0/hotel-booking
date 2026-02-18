@@ -109,6 +109,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -116,17 +117,18 @@
 
 /* Print Styles */
 @media print {
+
   /* Hide everything by default */
   body * {
     visibility: hidden;
   }
-  
+
   /* Show only bill content and its children */
   .print-only-content,
   .print-only-content * {
     visibility: visible;
   }
-  
+
   /* Position bill content correctly */
   .print-only-content {
     position: absolute;
@@ -140,7 +142,7 @@
     padding: 5px 0;
     overflow: hidden;
   }
-  
+
   /* Force single page printing - larger fonts */
   body {
     margin: 0;
@@ -170,7 +172,7 @@
   }
 
   /* Ensure card doesn't break */
-  .print-break > div {
+  .print-break>div {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
@@ -220,7 +222,7 @@
   }
 
   /* Scale content to fit page */
-  .print-only-content > div {
+  .print-only-content>div {
     max-height: 95vh !important;
     overflow: hidden !important;
     transform: scale(0.95);
@@ -245,7 +247,7 @@
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
   }
-  
+
   .sidebar-mobile.open {
     transform: translateX(0);
   }
@@ -277,7 +279,7 @@
   .sidebar-desktop {
     display: none;
   }
-  
+
   .sidebar-mobile {
     display: flex;
     position: fixed;
@@ -338,6 +340,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }

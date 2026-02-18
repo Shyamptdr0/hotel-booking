@@ -37,11 +37,11 @@ export default function ViewBill() {
     } else {
       // Default settings
       setPrintSettings({
-        restaurantName: 'Param Mitra Family Restaurant',
-        restaurantTagline: 'Delicious Food, Great Service',
-        address: 'Barwaha Maheshwar road, Dhargaon',
-        phone: '8085902662',
-        gstNumber: '23EQDPP8494L1Z3',
+        restaurantName: 'Moon Palace Hotel',
+        // restaurantTagline: 'Delicious Food, Great Service',
+        // address: 'Barwaha Maheshwar road, Dhargaon',
+        // phone: '8085902662',
+        // gstNumber: '23EQDPP8494L1Z3',
         fontSize: 'medium',
         paperSize: '80mm',
         showLogo: true,
@@ -84,7 +84,7 @@ export default function ViewBill() {
   }
 
   const handleCustomize = () => {
-    setTempSettings({ 
+    setTempSettings({
       ...printSettings,
       paperSize: printSettings.paperSize || '80mm' // Ensure paperSize is always set
     })
@@ -131,7 +131,7 @@ export default function ViewBill() {
     console.log('Current paper size:', paperSize);
     console.log('Current settings:', currentSettings);
     console.log('Show customize:', showCustomize);
-    
+
     switch (paperSize) {
       case '57mm': return 'max-w-[200px]'
       case '80mm': return 'max-w-[300px]'
@@ -157,9 +157,11 @@ export default function ViewBill() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="h-16 w-16 bg-black rounded-2xl flex items-center justify-center shadow-lg mb-2">
+                <span className="text-2xl font-black text-orange-500 italic">MP</span>
+              </div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
             </div>
           </div>
         </div>
@@ -206,7 +208,7 @@ export default function ViewBill() {
                   </Button>
                   <Link href={`/billing/print/${billId}`}>
                     <Button variant="outline" className="flex items-center justify-center w-full bg-black text-white">
-                     <Printer className="h-4 w-4 mr-2" />
+                      <Printer className="h-4 w-4 mr-2" />
                       Print Bill
                     </Button>
                   </Link>
@@ -241,7 +243,7 @@ export default function ViewBill() {
                             onChange={(e) => updateTempSetting('restaurantName', e.target.value)}
                           />
                         </div>
-                        <div>
+                        {/* <div>
                           <Label htmlFor="address">Address</Label>
                           <Input
                             id="address"
@@ -264,7 +266,7 @@ export default function ViewBill() {
                             value={tempSettings.gstNumber || ''}
                             onChange={(e) => updateTempSetting('gstNumber', e.target.value)}
                           />
-                        </div>
+                        </div> */}
                       </div>
 
                       {/* Print Settings */}
@@ -374,8 +376,8 @@ export default function ViewBill() {
             {/* Bill Content */}
             <div className={`${getPaperSizeClass()} mx-auto px-2 sm:px-0 print-only-content`}>
               <Card className="shadow-lg">
-                <CardContent className={`${getPaperSizePadding()} ${getFontSizeClass()}`} 
-                           style={{ color: currentSettings.textColor }}>
+                <CardContent className={`${getPaperSizePadding()} ${getFontSizeClass()}`}
+                  style={{ color: currentSettings.textColor }}>
                   {/* Restaurant Header */}
                   <div className={`mb-8 ${getAlignmentClass(currentSettings.headerAlignment)}`}>
                     {currentSettings.showLogo && (
@@ -383,15 +385,15 @@ export default function ViewBill() {
                         <div className="flex items-center space-x-2">
                           <div>
                             <h1 className="text-2xl font-bold">{currentSettings.restaurantName}</h1>
-                            <p className="text-black">{currentSettings.restaurantTagline}</p>
+                            {/* <p className="text-black">{currentSettings.restaurantTagline}</p> */}
                           </div>
                         </div>
                       </div>
                     )}
                     <div className="text-sm text-black">
-                      <p>{currentSettings.address}</p>
-                      <p>{currentSettings.phone}</p>
-                      <p>GSTIN: {currentSettings.gstNumber}</p>
+                      {/* <p>{currentSettings.address}</p>
+                       <p>{currentSettings.phone}</p>
+                       <p>GSTIN: {currentSettings.gstNumber}</p> */}
                     </div>
                   </div>
 
@@ -433,7 +435,7 @@ export default function ViewBill() {
                       <tbody>
                         {billItems.map((item, index) => {
                           const itemTotal = (item.price * item.quantity);
-                          
+
                           return (
                             <tr key={index} className="border-b border-gray-100">
                               <td className="py-1">{item.item_name || `Item ${index + 1}`}</td>
@@ -475,11 +477,11 @@ export default function ViewBill() {
                     </div>
                   )}
                 </CardContent>
-              </Card>
-            </div>
-          </main>
-        </div>
-      </div>
-    </AuthGuard>
+              </Card >
+            </div >
+          </main >
+        </div >
+      </div >
+    </AuthGuard >
   )
 }

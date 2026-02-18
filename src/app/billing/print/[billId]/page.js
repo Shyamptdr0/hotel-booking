@@ -62,11 +62,11 @@ export default function PrintBill() {
     } else {
       // Default settings
       setPrintSettings({
-        restaurantName: 'Param Mitra Family Restaurant',
-        restaurantTagline: 'Delicious Food, Great Service',
-        address: 'Barwaha Maheshwar road, Dhargaon',
-        phone: '8085902662',
-        gstNumber: '23EQDPP8494L1Z3',
+        restaurantName: 'Moon Palace Hotel',
+        // restaurantTagline: 'Delicious Food, Great Service',
+        // address: 'Barwaha Maheshwar road, Dhargaon',
+        // phone: '8085902662',
+        // gstNumber: '23EQDPP8494L1Z3',
         fontSize: 'medium',
         paperSize: '80mm', // Thermal receipt size - most common for restaurants
         showLogo: true,
@@ -118,7 +118,7 @@ export default function PrintBill() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'printed' })
       })
-      
+
       // Update table status to paid if bill has table_id
       if (bill && bill.table_id) {
         await fetch(`/api/tables/${bill.table_id}`, {
@@ -131,15 +131,15 @@ export default function PrintBill() {
           })
         })
       }
-      
+
       // Open print dialog and redirect immediately
       window.print()
-      
+
       // Redirect to tables page after printing
       setTimeout(() => {
         router.push('/tables')
       }, 1500)
-      
+
     } catch (error) {
       console.error('Error updating status before print:', error)
       // Still print and navigate even if status update fails
@@ -155,7 +155,7 @@ export default function PrintBill() {
   }
 
   const handleCustomize = () => {
-    setTempSettings({ 
+    setTempSettings({
       ...printSettings,
       paperSize: printSettings.paperSize || '80mm' // Ensure paperSize is always set
     })
@@ -184,9 +184,11 @@ export default function PrintBill() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="h-16 w-16 bg-black rounded-2xl flex items-center justify-center shadow-lg mb-2">
+                <span className="text-2xl font-black text-orange-500 italic">MP</span>
+              </div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
             </div>
           </div>
         </div>
@@ -238,7 +240,7 @@ export default function PrintBill() {
     console.log('Current paper size:', paperSize);
     console.log('Current settings:', currentSettings);
     console.log('Show customize:', showCustomize);
-    
+
     switch (paperSize) {
       case '57mm': return 'max-w-[200px]' // 57mm thermal receipt
       case '80mm': return 'max-w-[300px]' // 80mm thermal receipt (default)
@@ -336,7 +338,7 @@ export default function PrintBill() {
                             onChange={(e) => updateTempSetting('gstNumber', e.target.value)}
                           />
                         </div>
-              
+
                       </div>
 
                       {/* Print Settings */}
@@ -476,15 +478,15 @@ export default function PrintBill() {
                         <div className="flex items-center space-x-2">
                           <div>
                             <h1 className="text-sm font-bold">{currentSettings.restaurantName}</h1>
-                            <p className="text-xs text-black">{currentSettings.restaurantTagline || 'Delicious Food, Great Service'}</p>
+                            {/* <p className="text-xs text-black">{currentSettings.restaurantTagline || 'Delicious Food, Great Service'}</p> */}
                           </div>
                         </div>
                       </div>
                     )}
                     <div className="text-xs text-black">
-                      <p>{currentSettings.address}</p>
+                      {/* <p>{currentSettings.address}</p>
                       <p>{currentSettings.phone}</p>
-                      <p>GSTIN: {currentSettings.gstNumber}</p>
+                      <p>GSTIN: {currentSettings.gstNumber}</p> */}
                     </div>
                   </div>
 
@@ -526,7 +528,7 @@ export default function PrintBill() {
                       <tbody>
                         {billItems.map((item, index) => {
                           const itemTotal = (item.price * item.quantity);
-                          
+
                           return (
                             <tr key={index} className="border-b border-gray-100 print-no-break">
                               <td className="py-1">{item.item_name || `Item ${index + 1}`}</td>

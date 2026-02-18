@@ -40,11 +40,11 @@ export default function PrintFromTemporary() {
     } else {
       // Default settings
       setPrintSettings({
-        restaurantName: 'Param Mitra Family Restaurant',
-        restaurantTagline: 'Delicious Food, Great Service',
-        address: 'Barwaha Maheshwar road, Dhargaon',
-        phone: '8085902662',
-        gstNumber: '23EQDPP8494L1Z3',
+        restaurantName: 'Moon Palace Hotel',
+        // restaurantTagline: 'Delicious Food, Great Service',
+        // address: 'Barwaha Maheshwar road, Dhargaon',
+        // phone: '8085902662',
+        // gstNumber: '23EQDPP8494L1Z3',
         fontSize: 'medium',
         paperSize: '80mm',
         showLogo: true,
@@ -66,7 +66,7 @@ export default function PrintFromTemporary() {
     try {
       const response = await fetch(`/api/temporary-items?table_id=${tableId}`)
       const data = await response.json()
-      
+
       if (data.error) {
         throw new Error(data.error)
       }
@@ -94,7 +94,7 @@ export default function PrintFromTemporary() {
     try {
       // Calculate totals
       const subtotal = temporaryItems.reduce((sum, item) => sum + item.total, 0)
-      
+
       // Create final bill
       const billResponse = await fetch('/api/bills', {
         method: 'POST',
@@ -119,7 +119,7 @@ export default function PrintFromTemporary() {
       })
 
       const billResult = await billResponse.json()
-      
+
       if (billResult.error) {
         throw new Error(billResult.error)
       }
@@ -158,7 +158,7 @@ export default function PrintFromTemporary() {
 
     // Open print dialog and redirect immediately
     window.print()
-    
+
     // Redirect to tables page after printing
     setTimeout(() => {
       router.push('/tables')
@@ -170,7 +170,7 @@ export default function PrintFromTemporary() {
   }
 
   const handleCustomize = () => {
-    setTempSettings({ 
+    setTempSettings({
       ...printSettings,
       paperSize: printSettings.paperSize || '80mm'
     })
@@ -198,9 +198,11 @@ export default function PrintFromTemporary() {
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-              <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto animate-pulse" />
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-600"></div>
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="h-16 w-16 bg-black rounded-2xl flex items-center justify-center shadow-lg mb-2">
+                <span className="text-2xl font-black text-orange-500 italic">MP</span>
+              </div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
             </div>
           </div>
         </div>
@@ -259,7 +261,7 @@ export default function PrintFromTemporary() {
 
   const getPaperSizeClass = () => {
     const paperSize = currentSettings.paperSize || '80mm'
-    
+
     switch (paperSize) {
       case '57mm': return 'max-w-[200px]'
       case '80mm': return 'max-w-[300px]'
@@ -333,7 +335,7 @@ export default function PrintFromTemporary() {
                             onChange={(e) => updateTempSetting('restaurantName', e.target.value)}
                           />
                         </div>
-                        <div>
+                        {/* <div>
                           <Label htmlFor="address">Address</Label>
                           <Input
                             id="address"
@@ -356,7 +358,7 @@ export default function PrintFromTemporary() {
                             value={tempSettings.gstNumber || ''}
                             onChange={(e) => updateTempSetting('gstNumber', e.target.value)}
                           />
-                        </div>
+                        </div> */}
                       </div>
 
                       {/* Print Settings */}
@@ -496,15 +498,15 @@ export default function PrintFromTemporary() {
                         <div className="flex items-center space-x-2">
                           <div>
                             <h1 className="text-sm font-bold">{currentSettings.restaurantName}</h1>
-                            <p className="text-xs text-black">{currentSettings.restaurantTagline || 'Delicious Food, Great Service'}</p>
+                            {/* <p className="text-xs text-black">{currentSettings.restaurantTagline || 'Delicious Food, Great Service'}</p> */}
                           </div>
                         </div>
                       </div>
                     )}
                     <div className="text-xs text-black">
-                      <p>{currentSettings.address}</p>
+                      {/* <p>{currentSettings.address}</p>
                       <p>{currentSettings.phone}</p>
-                      <p>GSTIN: {currentSettings.gstNumber}</p>
+                      <p>GSTIN: {currentSettings.gstNumber}</p> */}
                     </div>
                   </div>
 
@@ -546,7 +548,7 @@ export default function PrintFromTemporary() {
                       <tbody>
                         {displayBill.items.map((item, index) => {
                           const itemTotal = (item.price * item.quantity)
-                          
+
                           return (
                             <tr key={index} className="border-b border-gray-100 print-no-break">
                               <td className="py-1">{item.item_name || `Item ${index + 1}`}</td>

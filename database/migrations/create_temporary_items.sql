@@ -27,6 +27,7 @@ ALTER TABLE temporary_items ENABLE ROW LEVEL SECURITY;
 
 -- Policy to allow all operations (for simplicity in this implementation)
 -- In production, you might want to restrict based on user roles
+DROP POLICY IF EXISTS "Allow all operations on temporary_items" ON temporary_items;
 CREATE POLICY "Allow all operations on temporary_items" ON temporary_items
   USING (true)
   WITH CHECK (true);
@@ -41,6 +42,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS temporary_items_updated_at ON temporary_items;
 CREATE TRIGGER temporary_items_updated_at
   BEFORE UPDATE ON temporary_items
   FOR EACH ROW
@@ -51,13 +53,15 @@ CREATE TRIGGER temporary_items_updated_at
 DO $$
 BEGIN
   -- Add foreign key to tables table if it exists
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tables') THEN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tables') AND 
+     NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_temporary_items_table_id') THEN
     ALTER TABLE temporary_items ADD CONSTRAINT fk_temporary_items_table_id 
       FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE CASCADE;
   END IF;
   
   -- Add foreign key to menu_items table if it exists
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'menu_items') THEN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'menu_items') AND 
+     NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_temporary_items_item_id') THEN
     ALTER TABLE temporary_items ADD CONSTRAINT fk_temporary_items_item_id 
       FOREIGN KEY (item_id) REFERENCES menu_items(id) ON DELETE CASCADE;
   END IF;

@@ -41,7 +41,7 @@ export default function LoginPage() {
       // Store session in localStorage
       if (result.data.session) {
         localStorage.setItem('supabase_session', JSON.stringify(result.data.session))
-        router.push('/tables')
+        router.push('/dashboard')
       } else {
         throw new Error('No session received')
       }
@@ -53,17 +53,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50 p-4">
-      <Card className="w-full max-w-md">
+    <div className="h-screen overflow-y-auto flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50 p-4">
+      <Card className="w-full max-w-md my-auto">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src="/PM-logo.png" alt="ParamMitra Restaurant" className="h-16 w-auto" />
+            <div className="h-16 w-16 bg-black rounded-2xl flex items-center justify-center shadow-2xl">
+              <span className="text-2xl font-black text-orange-500 italic">MP</span>
+            </div>
           </div>
           <CardTitle className="text-xl lg:text-2xl font-bold text-gray-900">
-            ParamMitra Restaurant
+            Moon Palace Hotel
           </CardTitle>
           <CardDescription>
-            Sign in to manage your restaurant
+            Sign in to manage your hotel & restaurant
           </CardDescription>
         </CardHeader>
         <CardContent>

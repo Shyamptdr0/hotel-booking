@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,7 @@ import { Navbar } from '@/components/navbar'
 import { ArrowLeft, Save, User, Phone, Mail, CreditCard, Calendar } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function NewBooking() {
+function BookingContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const preSelectedRoomId = searchParams.get('roomId')
@@ -288,5 +288,13 @@ export default function NewBooking() {
                 </div>
             </div>
         </AuthGuard>
+    )
+}
+
+export default function NewBooking() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <BookingContent />
+        </Suspense>
     )
 }

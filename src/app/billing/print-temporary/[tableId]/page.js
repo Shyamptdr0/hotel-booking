@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import { ArrowLeft, Printer, Home, Settings, Save } from 'lucide-react'
 import Link from 'next/link'
 import { formatPaymentType } from '@/lib/utils'
 
-export default function PrintFromTemporary() {
+function PrintBillContent() {
   const [temporaryItems, setTemporaryItems] = useState([])
   const [bill, setBill] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -606,5 +606,13 @@ export default function PrintFromTemporary() {
         </div>
       </div>
     </AuthGuard>
+  )
+}
+
+export default function PrintFromTemporary() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PrintBillContent />
+    </Suspense>
   )
 }
